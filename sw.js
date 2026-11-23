@@ -3,10 +3,10 @@
 // - 地理院タイルは「保存分があればそれ、無ければ取りに行って保存」。正しく取れた物(200)だけを、最大 2,000 枚まで残す。
 //   v0.1 は中身の見えない形(opaque)で上限なく保存していたため、Chrome では端末の容量をすぐ使い切っていた。
 // - 版が上がったら、古い保存(v0.1 の分も)を消す。
-const APP_CACHE = 'kijun-navi-app-v2';
+const APP_CACHE = 'kijun-navi-app-v3';
 const TILE_CACHE = 'kijun-navi-tiles-v2';
 const TILE_MAX = 2000;
-const APP_FILES = ['./', './index.html', './lib/leaflet.js', './lib/leaflet.css'];
+const APP_FILES = ['./', './index.html', './lib/leaflet.js', './lib/leaflet.css', './manifest.webmanifest', './img/icon192.png', './img/cat_head.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(APP_CACHE).then(c => c.addAll(APP_FILES)).catch(() => {}).then(() => self.skipWaiting()));

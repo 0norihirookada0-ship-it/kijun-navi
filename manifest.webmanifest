@@ -1,0 +1,17 @@
+{
+  "name": "ECP基準点ナビ",
+  "short_name": "基準点ナビ",
+  "description": "現場の基準点まで、地図と矢印で案内します(山の仕事の、道しるべ)",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#17324e",
+  "theme_color": "#17324e",
+  "icons": [
+    { "src": "img/icon192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "img/icon512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "img/icon180.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
