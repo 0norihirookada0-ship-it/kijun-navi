@@ -112,6 +112,21 @@ tr.pt{cursor:pointer}
 #opening{position:fixed;inset:0;z-index:2100;background:#17324e;color:#fff;overflow:hidden;transition:opacity .35s;cursor:pointer}
 #opening.out{opacity:0;pointer-events:none}
 #opBox{position:absolute;left:50%;top:50%;width:390px;height:844px;transform-origin:50% 50%;transform:translate(-50%,-50%) scale(var(--opS,1))}
+#opVid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#2c4a2a;display:none}
+#opening.vid #opVid{display:block}
+#opening.vid #opBox{display:none}
+#opTop{position:absolute;left:0;right:0;top:0;height:42%;background:linear-gradient(180deg,rgba(10,24,38,.75),rgba(10,24,38,0));display:none;pointer-events:none}
+#opening.vid #opTop{display:block}
+#opVTitle,#opVBubble{position:absolute;left:0;right:0;opacity:0;transform:translateY(14px);transition:opacity .5s,transform .5s;pointer-events:none;display:none}
+#opening.vid #opVTitle,#opening.vid #opVBubble{display:block}
+#opening.vid.end1 #opVBubble,#opening.vid.end2 #opVTitle{opacity:1;transform:none}
+#opVTitle{top:calc(env(safe-area-inset-top,0px) + 13vh);text-align:center;text-shadow:0 2px 12px rgba(0,0,0,.6)}
+#opVTitle b{display:block;font-size:34px;font-weight:900;letter-spacing:.04em}
+#opVTitle span{display:block;margin-top:8px;font-size:16px;font-weight:700}
+#opVBubble{top:30vh;text-align:center}
+#opVBubble span{display:inline-block;background:#fff;color:#17324e;font-size:21px;font-weight:900;padding:8px 16px;border-radius:18px;box-shadow:0 3px 10px rgba(0,0,0,.3);white-space:nowrap}
+#opSound{position:absolute;left:12px;top:calc(env(safe-area-inset-top,0px) + 12px);border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.35);color:#fff;border-radius:16px;padding:6px 12px;font:inherit;font-size:13px;font-weight:700;z-index:3;display:none}
+#opening.vid #opSound{display:block}
 #opSkip{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.25);color:#fff;border-radius:16px;padding:6px 12px;font-size:13px;font-weight:700;z-index:2}
 #opFoot{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);text-align:center;font-size:12px;opacity:.85;z-index:2}
 /* 2 回目からは短く: 木が倒れる所から最後まで */
@@ -187,7 +202,13 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <!-- 起動画面(2026-11-23 社長「起動画面作って その後に点検画面」)。1 秒ほど出して点検画面へ -->
 <!-- 起動画面(2026-11-23 社長決定: 黒猫(フォレスト総建のヘルメット)がチェーンソーで伐る。2026-11-23 社長「動画はこのキャラクタつかう」)。
      いつも 7 秒の全部。押すと飛ばす(2026-11-23 社長「短縮はタップした時だけ」)。JS の読み込みに関わらず下がる -->
-<div id="opening" role="button" tabindex="0" aria-label="起動画面。押すと飛ばします">
+<div id="opening" class="vid" role="button" tabindex="0" aria-label="起動画面。押すと飛ばします">
+  <!-- 動画: Gemini(Veo)で、社の黒猫(フォレスト総建のヘルメット)の画像から作った 10 秒(2026-11-23 社長「生成AIを駆使せよ」)。音なしで自動再生 -->
+  <video id="opVid" src="img/opening.mp4" poster="img/opening_poster.jpg" muted playsinline autoplay preload="auto"></video>
+  <div id="opTop"></div>
+  <div id="opVTitle"><b>ECP基準点ナビ</b><span>山の仕事の、道しるべ</span></div>
+  <div id="opVBubble"><span>ここまでが伐採区域!</span></div>
+  <button id="opSound" type="button">🔊 音を出す</button>
   <div id="opBox">
 <svg width="390" height="844" viewBox="0 0 390 844" aria-hidden="true" style="position: absolute; left: 0; top: 0">
 <defs>
@@ -229,7 +250,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </div>
   </div>
   <span id="opSkip">押して飛ばす</span>
-  <div id="opFoot">v0.2.11 試験中 ・ 株式会社ネクサス</div>
+  <div id="opFoot">v0.3.0 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
@@ -246,14 +267,47 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     }
     op.addEventListener('click', finish);
     op.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') finish(); });
-    setTimeout(finish, reduce ? 1500 : 7000); // いつも 7 秒の全部。短くするのは押したときだけ(2026-11-23 社長)
+    // 動画(10 秒)を流す。最後まで流れたら点検画面へ。押せば飛ばす(2026-11-23 社長「短縮はタップした時だけ」)
+    // 動画が流れない(省電力モード・読めない)ときは、絵のアニメ(7 秒)に切り替える
+    var vid = document.getElementById('opVid'), started = false;
+    var origFinish = finish;
+    finish = function () { try { vid.pause(); } catch (e) {} origFinish(); };
+    op.removeEventListener('click', origFinish);
+    op.addEventListener('click', finish);
+    function fallback() {
+      if (started || done) return;
+      started = true;
+      op.classList.remove('vid');
+      try { vid.pause(); } catch (e) {}
+      setTimeout(finish, 7000);
+    }
+    if (reduce) { vid.removeAttribute('autoplay'); setTimeout(finish, 1500); }
+    else {
+      vid.addEventListener('playing', function () {
+        if (started) return; started = true;
+        setTimeout(finish, 11500); // 念のため
+      });
+      vid.addEventListener('timeupdate', function () {
+        if (vid.currentTime >= 7.6) op.classList.add('end1');
+        if (vid.currentTime >= 8.2) op.classList.add('end2');
+      });
+      vid.addEventListener('ended', function () { setTimeout(finish, 600); });
+      vid.addEventListener('error', fallback);
+      var pr = vid.play && vid.play(); if (pr && pr.catch) pr.catch(function () { setTimeout(fallback, 300); });
+      setTimeout(fallback, 2500); // 2.5 秒たっても流れ始めなければ絵のアニメ
+    }
+    document.getElementById('opSound').addEventListener('click', function (e) {
+      e.stopPropagation();
+      vid.muted = false; this.textContent = '🔊 音あり';
+      var pr = vid.play(); if (pr && pr.catch) pr.catch(function () {});
+    });
   })();
 </script>
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
     <svg width="44" height="44" viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14 L78 70 L18 70 Z" fill="#e8a300" stroke="#17324e" stroke-width="5" stroke-linejoin="round"/></svg>
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.2.11 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.3.0 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <ul class="sp-list">
     <li id="chkLib" class="wait"><span class="s">…</span><div>地図の部品<small>読み込んでいます</small></div></li>
@@ -424,7 +478,7 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.2.11(2026-11-23)試験中';
+const VERSION = 'v0.3.0(2026-11-23)試験中';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
