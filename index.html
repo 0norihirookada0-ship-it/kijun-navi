@@ -345,7 +345,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </div>
   </div>
   <button id="opSkip" type="button">とばす</button>
-  <div id="opFoot">v0.4.7 試験中 ・ 株式会社ネクサス</div>
+  <div id="opFoot">v0.4.8 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
@@ -393,7 +393,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.7 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.8 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <div class="sp-cat"><img class="catHead" src="img/cat_head.png" alt="" style="width:64px;height:64px"><span id="spCatMsg">準備しています…</span></div>
   <ul class="sp-list">
@@ -495,7 +495,9 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       <ol><li>LINE のトークでファイルを<b>長押し</b>→「保存」(「ダウンロード」に入ります)。押して出る「ビューワーを起動」で「スプレッドシート」を選ぶと、Google のスプレッドシートに変わって読めなくなります</li><li>ここに戻って選ぶボタン →「ダウンロード」から選ぶ</li></ol>
     </details>
     <details class="fhelp" id="pasteBox"><summary>📋 貼り付けで読む(スプレッドシート・メモから)</summary>
-      <p>スプレッドシートで点の表(点名・X・Y・H)を選んでコピーし、下の枠を長押しして「貼り付け」→「読む」。</p>
+      <ol><li>LINE で点の CSV を押す →「スプレッドシート」で開く(表が出ます)</li><li>表の左上の角(A の左・1 の上)を押して全部を選ぶ → もう一度押して「コピー」</li><li>ここに戻って下の「📋 コピーした表を読む」</li></ol>
+      <div class="row"><button class="btn primary" id="btnClip" type="button">📋 コピーした表を読む</button></div>
+      <p>うまくいかないときは、下の枠を長押しして「貼り付け」→「読む」。</p>
       <textarea id="pasteTxt" rows="4" style="width:100%;font:13px monospace" placeholder="TNO.1,-166100.000,-19700.000,104.5"></textarea>
       <div class="row"><button class="btn primary" id="btnPaste" type="button">読む</button></div>
     </details>
@@ -588,8 +590,8 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.4.7(2026-11-24)試験中';
-window.__knVer = 'v0.4.7';
+const VERSION = 'v0.4.8(2026-11-24)試験中';
+window.__knVer = 'v0.4.8';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -913,6 +915,11 @@ async function loadPtsFile(f) {
     else msg('#ptsMsg', `${f.name} を読めません: ${err.message}`, 'bad');
   }
 }
+$('#btnClip').addEventListener('click', async () => {
+  let t = '';
+  try { t = await navigator.clipboard.readText(); } catch (e) { msg('#ptsMsg', 'コピーした中身を読めませんでした。下の枠を長押しして「貼り付け」→「読む」を押してください。', 'bad'); return; }
+  $('#pasteTxt').value = t; $('#btnPaste').click();
+});
 $('#btnPaste').addEventListener('click', () => {
   const list = parseCsvSima($('#pasteTxt').value);
   if (!list.length) { msg('#ptsMsg', '点が見つかりません。点名・X・Y・H の 4 列をコピーして貼り付けてください。', 'bad'); return; }
