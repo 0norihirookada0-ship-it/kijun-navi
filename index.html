@@ -116,7 +116,7 @@ tr.pt{cursor:pointer}
 #opening .op-ttl{font-size:30px;font-weight:800;letter-spacing:.04em}
 #opening .op-sub{font-size:14px;opacity:.85}
 #opening .op-bar{width:180px;height:6px;border-radius:3px;background:rgba(255,255,255,.2);overflow:hidden}
-#opening .op-bar i{display:block;height:100%;width:0;background:var(--accent);animation:opBar 1.1s ease-out forwards}
+#opening .op-bar i{display:block;height:100%;width:0;background:var(--accent);animation:opBar 2.3s ease-out forwards}
 #opening .op-foot{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);font-size:12px;opacity:.75}
 @keyframes opPop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes opBar{to{width:100%}}
@@ -159,21 +159,21 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     <div class="op-sub">現場の基準点まで、地図と矢印で案内します</div>
     <div class="op-bar"><i></i></div>
   </div>
-  <div class="op-foot">v0.2.6 試験中 ・ 株式会社ネクサス</div>
+  <div class="op-foot">v0.2.7 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
-  // 起動画面は JS の読み込みに関わらず 1.2 秒で下げ、点検画面を見せる
+  // 起動画面は JS の読み込みに関わらず 2.5 秒で下げ、点検画面を見せる(2026-11-23 社長「も少し長く表示」)
   setTimeout(function () {
     var op = document.getElementById('opening'); op.classList.add('out');
     window.__openingDone = true; window.dispatchEvent(new Event('opening-done'));
     setTimeout(function () { op.hidden = true; }, 400);
-  }, 1200);
+  }, 2500);
 </script>
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
     <svg width="44" height="44" viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14 L78 70 L18 70 Z" fill="#e8a300" stroke="#17324e" stroke-width="5" stroke-linejoin="round"/></svg>
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.2.6 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.2.7 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <ul class="sp-list">
     <li id="chkLib" class="wait"><span class="s">…</span><div>地図の部品<small>読み込んでいます</small></div></li>
@@ -344,7 +344,7 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.2.6(2026-11-23)試験中';
+const VERSION = 'v0.2.7(2026-11-23)試験中';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
