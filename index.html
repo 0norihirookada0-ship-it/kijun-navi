@@ -115,7 +115,6 @@ tr.pt{cursor:pointer}
 #opSkip{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.25);color:#fff;border-radius:16px;padding:6px 12px;font-size:13px;font-weight:700;z-index:2}
 #opFoot{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);text-align:center;font-size:12px;opacity:.85;z-index:2}
 /* 2 回目からは短く: 木が倒れる所から最後まで */
-#opening.short #opBox *{animation-delay:-4.9s !important}
 .k-walk{animation:kWalk 7s ease-in-out infinite}
 @keyframes kWalk{0%,28%{transform:translateX(0)}36%,54%{transform:translateX(-110px)}61%,100%{transform:translateX(-60px)}}
 .k-bob{animation:kBob 7s linear infinite}
@@ -187,7 +186,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <body>
 <!-- 起動画面(2026-11-23 社長「起動画面作って その後に点検画面」)。1 秒ほど出して点検画面へ -->
 <!-- 起動画面(2026-11-23 社長決定: 黒猫(フォレスト総建のヘルメット)がチェーンソーで伐る。2026-11-23 社長「動画はこのキャラクタつかう」)。
-     初めては 7 秒の全部、2 回目からは木が倒れる所から約 2 秒。押すと飛ばす。JS の読み込みに関わらず下がる -->
+     いつも 7 秒の全部。押すと飛ばす(2026-11-23 社長「短縮はタップした時だけ」)。JS の読み込みに関わらず下がる -->
 <div id="opening" role="button" tabindex="0" aria-label="起動画面。押すと飛ばします">
   <div id="opBox">
 <svg width="390" height="844" viewBox="0 0 390 844" aria-hidden="true" style="position: absolute; left: 0; top: 0">
@@ -230,14 +229,12 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </div>
   </div>
   <span id="opSkip">押して飛ばす</span>
-  <div id="opFoot">v0.2.10 試験中 ・ 株式会社ネクサス</div>
+  <div id="opFoot">v0.2.11 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
     var op = document.getElementById('opening');
-    var seen = false; try { seen = localStorage.getItem('kn.opSeen') === '1'; localStorage.setItem('kn.opSeen', '1'); } catch (e) {}
     var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (seen) op.classList.add('short');
     function fit() { var s = Math.max(innerWidth / 390, innerHeight / 844); op.style.setProperty('--opS', s); }
     fit(); addEventListener('resize', fit);
     var done = false;
@@ -249,14 +246,14 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     }
     op.addEventListener('click', finish);
     op.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') finish(); });
-    setTimeout(finish, reduce ? 1500 : (seen ? 2300 : 7000));
+    setTimeout(finish, reduce ? 1500 : 7000); // いつも 7 秒の全部。短くするのは押したときだけ(2026-11-23 社長)
   })();
 </script>
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
     <svg width="44" height="44" viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14 L78 70 L18 70 Z" fill="#e8a300" stroke="#17324e" stroke-width="5" stroke-linejoin="round"/></svg>
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.2.10 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.2.11 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <ul class="sp-list">
     <li id="chkLib" class="wait"><span class="s">…</span><div>地図の部品<small>読み込んでいます</small></div></li>
@@ -427,7 +424,7 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.2.10(2026-11-23)試験中';
+const VERSION = 'v0.2.11(2026-11-23)試験中';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
