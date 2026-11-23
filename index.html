@@ -346,7 +346,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </div>
   </div>
   <button id="opSkip" type="button">とばす</button>
-  <div id="opFoot">v0.4.11 試験中 ・ 株式会社ネクサス</div>
+  <div id="opFoot">v0.4.12 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
@@ -394,7 +394,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.11 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.12 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <div class="sp-cat"><img class="catHead" src="img/cat_head.png" alt="" style="width:64px;height:64px"><span id="spCatMsg">準備しています…</span></div>
   <ul class="sp-list">
@@ -599,8 +599,8 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.4.11(2026-11-24)試験中';
-window.__knVer = 'v0.4.11';
+const VERSION = 'v0.4.12(2026-11-24)試験中';
+window.__knVer = 'v0.4.12';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1234,7 +1234,12 @@ $('#btnDwgShow').addEventListener('click', () => {
   refreshDrawing();
 });
 $('#btnDwgShow').classList.toggle('on', dwgShow); $('#btnDwgShow').textContent = dwgShow ? '表示中' : '隠し中';
-$('#btnDwgFit').addEventListener('click', () => { if (dwgBounds) { map.fitBounds(dwgBounds, fitPad(19)); showSheet(null); } });
+// 図面の全体へ: 図面が無いときは黙らずに知らせる。見せたあとは現在地の追いかけを止める(止めないと次の GPS で戻ってしまう。◎ で戻る)
+$('#btnDwgFit').addEventListener('click', () => {
+  if (!dwgBounds) { msg('#dwgMsg', '図面がまだ入っていません。先に「図面を読む」で DXF を選んでください。', 'bad'); return; }
+  follow = false; $('#btnHere').classList.remove('on');
+  showSheet(null); map.invalidateSize(); map.fitBounds(dwgBounds, fitPad(19));
+});
 $('#btnDwgClear').addEventListener('click', () => { setDrawing(null, false); idbDel('dxf'); msg('#dwgMsg', '図面を外しました。', ''); });
 
 // 上の座標の帯・下の案内とボタンに隠れないよう、見せる範囲の余白を取る
