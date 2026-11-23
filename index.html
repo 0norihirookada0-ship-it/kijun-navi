@@ -60,8 +60,8 @@ button{font:inherit;color:inherit}
 #bar button span{font-size:12.5px;font-weight:700}
 #bar button.on{color:var(--navy);background:#eef2f8}
 /* 下から出る欄 */
-#sheet{position:fixed;left:0;right:0;bottom:0;z-index:1100;max-height:72vh;overflow:auto;background:#fff;border-radius:14px 14px 0 0;
-  box-shadow:0 -4px 16px rgba(0,0,0,.25);padding:0 14px calc(env(safe-area-inset-bottom,0px) + 14px)}
+#sheet{position:fixed;left:0;right:0;bottom:calc(var(--barH) + env(safe-area-inset-bottom,0px));z-index:1100;max-height:calc(100dvh - var(--barH) - env(safe-area-inset-bottom,0px) - 120px);overflow:auto;background:#fff;border-radius:14px 14px 0 0;
+  box-shadow:0 -4px 16px rgba(0,0,0,.25);padding:0 14px 14px}
 .sh-head{position:sticky;top:0;background:#fff;display:flex;align-items:center;padding:12px 0 8px;border-bottom:1px solid var(--line);margin-bottom:10px}
 .sh-head b{font-size:16px}
 .sh-head button{margin-left:auto;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 14px;font-weight:700}
@@ -91,7 +91,19 @@ tr.pt{cursor:pointer}
 .curIcon svg{display:block;transition:transform .2s linear}
 .leaflet-bottom{bottom:calc(var(--barH) + env(safe-area-inset-bottom,0px))}
 .leaflet-control-attribution{font-size:10px}
-/* 起動画面(点検つき) */
+/* 起動画面(最初に 1 秒ほど。そのあと点検画面) */
+#opening{position:fixed;inset:0;z-index:2100;background:#17324e;color:#fff;display:grid;place-items:center;text-align:center;transition:opacity .35s}
+#opening.out{opacity:0;pointer-events:none}
+#opening .op-in{display:grid;gap:14px;justify-items:center;padding:0 24px}
+#opening .op-logo{animation:opPop .6s ease-out both}
+#opening .op-ttl{font-size:30px;font-weight:800;letter-spacing:.04em}
+#opening .op-sub{font-size:14px;opacity:.85}
+#opening .op-bar{width:180px;height:6px;border-radius:3px;background:rgba(255,255,255,.2);overflow:hidden}
+#opening .op-bar i{display:block;height:100%;width:0;background:var(--accent);animation:opBar 1.1s ease-out forwards}
+#opening .op-foot{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);font-size:12px;opacity:.75}
+@keyframes opPop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes opBar{to{width:100%}}
+/* 点検画面 */
 #splash{position:fixed;inset:0;z-index:2000;background:#f4f6f8;color:var(--ink);overflow:auto;
   padding:calc(env(safe-area-inset-top,0px) + 34px) 18px calc(env(safe-area-inset-bottom,0px) + 110px);transition:opacity .3s}
 #splash.out{opacity:0;pointer-events:none}
@@ -121,11 +133,29 @@ tr.pt{cursor:pointer}
 </style>
 </head>
 <body>
-<!-- 起動画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
+<!-- 起動画面(2026-11-23 社長「起動画面作って その後に点検画面」)。1 秒ほど出して点検画面へ -->
+<div id="opening" aria-label="ECP基準点ナビ 起動中">
+  <div class="op-in">
+    <svg class="op-logo" width="104" height="104" viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="44" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="2"/><path d="M48 14 L78 70 L18 70 Z" fill="#e8a300" stroke="#fff" stroke-width="3" stroke-linejoin="round"/><circle cx="48" cy="54" r="5" fill="#17324e"/></svg>
+    <div class="op-ttl">ECP基準点ナビ</div>
+    <div class="op-sub">現場の基準点まで、地図と矢印で案内します</div>
+    <div class="op-bar"><i></i></div>
+  </div>
+  <div class="op-foot">v0.2.2 試験中 ・ 株式会社ネクサス</div>
+</div>
+<script>
+  // 起動画面は JS の読み込みに関わらず 1.2 秒で下げ、点検画面を見せる
+  setTimeout(function () {
+    var op = document.getElementById('opening'); op.classList.add('out');
+    window.__openingDone = true; window.dispatchEvent(new Event('opening-done'));
+    setTimeout(function () { op.hidden = true; }, 400);
+  }, 1200);
+</script>
+<!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
     <svg width="44" height="44" viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14 L78 70 L18 70 Z" fill="#e8a300" stroke="#17324e" stroke-width="5" stroke-linejoin="round"/></svg>
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.2.1 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.2.2 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <ul class="sp-list">
     <li id="chkLib" class="wait"><span class="s">…</span><div>地図の部品<small>読み込んでいます</small></div></li>
@@ -272,7 +302,7 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.2.1(2026-11-23)試験中';
+const VERSION = 'v0.2.2(2026-11-23)試験中';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -374,11 +404,15 @@ function closeSplash() {
   const sp = $('#splash'); sp.classList.add('out');
   setTimeout(() => { sp.hidden = true; map.invalidateSize(); }, 320);
 }
+let openingAt = window.__openingDone ? performance.now() : null;
+if (!window.__openingDone) window.addEventListener('opening-done', () => { openingAt = performance.now(); maybeAutoClose(); }, { once: true });
 function maybeAutoClose() {
-  if (splashClosed) return;
+  if (splashClosed || openingAt == null) return;
+  const shown = performance.now() - openingAt;
+  if (shown < 1500) { setTimeout(maybeAutoClose, 1500 - shown + 20); return; }
   const geoOk = spState.geo === 'ok' || spState.geo === 'warn';
   const oriOk = spState.ori === 'ok' || spState.ori === 'warn';
-  if (spState.data && geoOk && oriOk) setTimeout(closeSplash, 900);
+  if (spState.data && geoOk && oriOk) setTimeout(closeSplash, 600);
 }
 $('#spGo').addEventListener('click', () => { if (needsOriPermission && spState.ori !== 'ok') askCompass(); closeSplash(); });
 setTimeout(() => { if (!splashClosed && spState.geo === 'wait') $('#spGo').textContent = '地図へ進む(位置は測り続けます)'; }, 10000);
@@ -1035,7 +1069,7 @@ $('#btnCalRun').addEventListener('click', () => {
 $('#btnCalClear').addEventListener('click', () => { calPairs = []; calTransform = null; renderCalTable(); updateGeoView(); updateNav(); msg('#calMsg', '現地合わせを消しました', ''); });
 
 /* ---------- 地図の保存(Service Worker) ---------- */
-if ('serviceWorker' in navigator && location.protocol === 'https:') {
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   navigator.serviceWorker.register('sw.js')
     .then(() => { $('#swMsg').textContent = '地図の保存: 使えます'; })
     .catch(() => { $('#swMsg').textContent = '地図の保存: この開き方では使えません(LINE の中など)'; });
