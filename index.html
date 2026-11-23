@@ -145,7 +145,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     <div class="op-sub">現場の基準点まで、地図と矢印で案内します</div>
     <div class="op-bar"><i></i></div>
   </div>
-  <div class="op-foot">v0.2.4 試験中 ・ 株式会社ネクサス</div>
+  <div class="op-foot">v0.2.5 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   // 起動画面は JS の読み込みに関わらず 1.2 秒で下げ、点検画面を見せる
@@ -159,7 +159,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <div id="splash">
   <div class="sp-head">
     <svg width="44" height="44" viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14 L78 70 L18 70 Z" fill="#e8a300" stroke="#17324e" stroke-width="5" stroke-linejoin="round"/></svg>
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.2.4 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.2.5 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <ul class="sp-list">
     <li id="chkLib" class="wait"><span class="s">…</span><div>地図の部品<small>読み込んでいます</small></div></li>
@@ -322,7 +322,7 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.2.4(2026-11-23)試験中';
+const VERSION = 'v0.2.5(2026-11-23)試験中';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -553,10 +553,19 @@ function drawPoints() {
 }
 /* スマホは .dxf・.sim の種類を知らないので、ボタンに拡張子のしぼり込みを付けると灰色になって選べない
    (2026-11-23 社長「DXF sima csv 選べない」)。どのファイルも選べるようにし、中身で図面か基準点かを見分ける */
+/* ファイルを読む。古い iPhone で Blob.arrayBuffer が無い・失敗するときは FileReader で読み直す */
+function readBuf(blob) {
+  if (blob.arrayBuffer) return blob.arrayBuffer().catch(() => readBufFR(blob));
+  return readBufFR(blob);
+}
+function readBufFR(blob) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error || new Error('ファイルを読めません')); r.readAsArrayBuffer(blob); });
+}
 async function looksLikeDxf(f) {
   if (/\.dxf$/i.test(f.name)) return true;
   if (/\.(csv|sim|sima|txt)$/i.test(f.name)) return false;
-  const head = new TextDecoder('latin1').decode(await f.slice(0, 65536).arrayBuffer());
+  let head = '';
+  try { head = new TextDecoder('latin1').decode(await readBuf(f.slice(0, 65536))); } catch { return false; }
   return /(^|\n)\s*0\s*\r?\n\s*SECTION\s*\r?\n/.test(head);
 }
 async function pickFile(f, wanted) {
@@ -566,10 +575,11 @@ async function pickFile(f, wanted) {
   if (wanted !== 'pts') showSheet('pts');
   return loadPtsFile(f);
 }
-$('#fPts').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; pickFile(f, 'pts'); });
+// iPhone の Safari は、読む前に欄を空にすると選んだファイルが読めなくなる(2026-11-23 社長の iPhone で発生)。読み終わってから空にする
+$('#fPts').addEventListener('change', async e => { const inp = e.target; await pickFile(inp.files[0], 'pts'); inp.value = ''; });
 async function loadPtsFile(f) {
   try {
-    const list = parseCsvSima(decodeText(await f.arrayBuffer()));
+    const list = parseCsvSima(decodeText(await readBuf(f)));
     if (!list.length) throw new Error('点が見つかりません(CSV は 点名,X,Y,H の順)');
     setPoints(list, `${f.name}: ${list.length} 点を読みました。点を押すと案内します。`);
   } catch (err) { msg('#ptsMsg', `${f.name} を読めません: ${err.message}`, 'bad'); }
@@ -758,12 +768,12 @@ function setDrawing(d, fit) {
   dwgRaw = d; rebuildDrawingLL(); refreshDrawing();
   if (fit && dwgBounds) map.fitBounds(dwgBounds, fitPad(19));
 }
-$('#fDxf').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; pickFile(f, 'dwg'); });
+$('#fDxf').addEventListener('change', async e => { const inp = e.target; await pickFile(inp.files[0], 'dwg'); inp.value = ''; });
 async function loadDxfFile(f) {
   msg('#dwgMsg', `${f.name}(${(f.size / 1024 / 1024).toFixed(1)}MB)を読んでいます…(地図はそのまま使えます)`, '');
   const t0 = performance.now();
   try {
-    const g = await parseInWorker(await f.arrayBuffer());
+    const g = await parseInWorker(await readBuf(f));
     if (!g.segs.length && !g.pts.length) throw new Error('線・ポリライン・円・点が見つかりません');
     const d = { name: f.name, segs: g.segs, pts: g.pts };
     setDrawing(d, true);
