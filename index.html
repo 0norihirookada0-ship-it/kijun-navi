@@ -209,6 +209,20 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 @keyframes catHop{from{transform:translateY(0)}to{transform:translateY(-6px)}}
 #navCard.arrived #nDist{color:var(--ok)}
 @media (prefers-reduced-motion:reduce){#navCard.arrived .catArrive{animation:none}}
+/* チュートリアル */
+#tut{position:fixed;inset:0;z-index:1500}
+#tutHole{position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgba(10,20,30,.62);border:3px solid #e8a300;transition:left .3s,top .3s,width .3s,height .3s;pointer-events:none}
+#tutHole.none{border-width:0;width:0;height:0;left:50%;top:50%}
+#tutCard{position:absolute;left:12px;right:12px;max-width:480px;margin:0 auto;background:#fff;color:#17324e;border-radius:16px;padding:12px 12px 10px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+#tutCard .tc-row{display:flex;gap:10px;align-items:flex-start}
+#tutCard img{width:64px;height:64px;flex:none;animation:catHop .7s ease-in-out infinite alternate}
+#tutCard p{margin:2px 0 0;font-size:16px;font-weight:800;line-height:1.55}
+#tutCard small{display:block;margin-top:4px;font-size:13px;font-weight:400;color:#3d4c5c;line-height:1.55}
+#tutCard .tc-foot{display:flex;align-items:center;gap:8px;margin-top:10px}
+#tutCard .tc-step{font-size:12px;color:#566474;margin-right:auto}
+#tutCard button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:9px 14px;font-weight:800;font-size:14px}
+#tutCard button.primary{background:var(--accent);border-color:var(--accent);color:#1d1500}
+@media (prefers-reduced-motion:reduce){#tutCard img{animation:none}#tutHole{transition:none}}
 /* カメラ */
 #cam{position:fixed;inset:0;z-index:1200;background:#000}
 #cam video{width:100%;height:100%;object-fit:cover}
@@ -272,7 +286,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </div>
   </div>
   <button id="opSkip" type="button">押して飛ばす</button>
-  <div id="opFoot">v0.3.2 試験中 ・ 株式会社ネクサス</div>
+  <div id="opFoot">v0.3.3 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
@@ -346,7 +360,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.3.2 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.3.3 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <div class="sp-cat"><img class="catHead" src="img/cat_head.png" alt="" style="width:64px;height:64px"><span id="spCatMsg">準備しています…</span></div>
   <ul class="sp-list">
@@ -462,7 +476,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     </div>
     <table id="calTable"><thead><tr><th>点名</th><th>水平のずれ</th><th></th></tr></thead><tbody></tbody></table>
     <p id="calMsg" class="msg"></p>
-    <div class="row"><a class="btn" href="tsukaikata.pdf" target="_blank" rel="noopener">📖 使い方(PDF)</a></div>
+    <div class="row"><button class="btn" id="btnTut" type="button">🐾 チュートリアルをもう一度</button><a class="btn" href="tsukaikata.pdf" target="_blank" rel="noopener">📖 使い方(PDF)</a></div>
     <p class="ver" id="verLine"></p>
   </section>
 
@@ -485,6 +499,13 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
   </section>
 </div>
 
+<div id="tut" hidden>
+  <div id="tutHole" class="none"></div>
+  <div id="tutCard" role="dialog" aria-live="polite">
+    <div class="tc-row"><img src="img/cat_head.png" alt=""><div><p id="tutText"></p><small id="tutSub"></small></div></div>
+    <div class="tc-foot"><span class="tc-step" id="tutStep"></span><button id="tutSkip" type="button">とばす</button><button id="tutNext" class="primary" type="button">次へ</button></div>
+  </div>
+</div>
 <div id="cam" hidden>
   <video id="camVideo" playsinline muted autoplay></video>
   <div id="camOver">
@@ -529,7 +550,7 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.3.2(2026-11-23)試験中';
+const VERSION = 'v0.3.3(2026-11-23)試験中';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -629,7 +650,7 @@ let splashClosed = false;
 function closeSplash() {
   if (splashClosed) return; splashClosed = true;
   const sp = $('#splash'); sp.classList.add('out');
-  setTimeout(() => { sp.hidden = true; map.invalidateSize(); }, 320);
+  setTimeout(() => { sp.hidden = true; map.invalidateSize(); setTimeout(maybeTut, 300); }, 320);
 }
 let openingAt = window.__openingDone ? performance.now() : null;
 if (!window.__openingDone) window.addEventListener('opening-done', () => { openingAt = performance.now(); maybeAutoClose(); }, { once: true });
@@ -1259,6 +1280,46 @@ function updateNavArrow() {
 }
 $('#emptyGo').addEventListener('click', () => showSheet('pts'));
 $('#nClose').addEventListener('click', () => { selectedIdx = -1; savePoints(); drawPoints(); renderPoints(); updateNav(); });
+
+/* ---------- チュートリアル(黒猫が 1 つずつ指して教える。2026-11-23 社長「チュートリアル作成」) ---------- */
+const TUT = [
+  { t: 'ぼくが使い方を教えるよ!', s: '大事なのは 5 つだけ。「次へ」で進んでね。' },
+  { el: '#top .coord', t: '上の帯は、いまいる所の座標', s: 'X・Y が大きく出るよ。緑の「精度 ±○m」が小さいほど正確。' },
+  { el: '#bPts', t: 'まず「基準点」を押して、点を読み込もう', s: '現場の点のファイル(CSV・SIMA)を選ぶよ。LINE で届いたファイルは、先に「ファイル」(iPhone)・「ダウンロード」(Android)に保存してね。' },
+  { el: '.ptTri', t: 'オレンジの三角(基準点)を押すと案内開始', s: '下に矢印と距離が出るよ。矢印の方へ歩いて、2m まで近づいたら、ぼくが「着いた!」と知らせるよ。' },
+  { el: '#btnMeasure', t: '📏 で距離が測れるよ', s: '点を順に押すと、点と点の距離が出るよ。その上の 🏷 は点名を出したり隠したりするボタン。' },
+  { el: '#bar', t: '図面を重ねる・地図を切り替える', s: '「図面」で DXF を重ねられるよ。「地図切替」で写真や白い地図にできるよ。' },
+  { t: '困ったら「📖 使い方」を見てね', s: '「基準点」の欄のいちばん下にあるよ。このチュートリアルもそこからもう一度見られるよ。じゃあ、行ってらっしゃい!', last: true },
+];
+let tutI = 0;
+function placeTut() {
+  const st = TUT[tutI], hole = $('#tutHole'), card = $('#tutCard');
+  $('#tutText').textContent = st.t; $('#tutSub').textContent = st.s;
+  $('#tutStep').textContent = `${tutI + 1} / ${TUT.length}`;
+  $('#tutNext').textContent = st.last ? '始める' : '次へ';
+  const el = st.el && st.hole !== false ? document.querySelector(st.el) : null;
+  card.style.top = card.style.bottom = '';
+  if (el && el.getBoundingClientRect().width) {
+    const r = el.getBoundingClientRect(), pad = r.width < 40 ? 16 : 6;
+    hole.classList.remove('none');
+    Object.assign(hole.style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px` });
+    if (r.top + r.height / 2 > innerHeight / 2) card.style.top = `calc(env(safe-area-inset-top,0px) + ${Math.max(16, Math.min(r.top - 230, 120))}px)`;
+    else card.style.top = `${r.bottom + 18}px`;
+  } else {
+    hole.classList.add('none'); hole.removeAttribute('style');
+    card.style.top = '30%';
+  }
+}
+function startTut() {
+  showSheet(null); if (measuring) setMeasuring(false);
+  tutI = 0; $('#tut').hidden = false; placeTut();
+}
+function endTut() { $('#tut').hidden = true; try { localStorage.setItem('kn.tutDone', '1'); } catch {} }
+$('#tutNext').addEventListener('click', () => { if (TUT[tutI].last) endTut(); else { tutI++; placeTut(); } });
+$('#tutSkip').addEventListener('click', endTut);
+$('#btnTut').addEventListener('click', startTut);
+addEventListener('resize', () => { if (!$('#tut').hidden) placeTut(); });
+function maybeTut() { let done = false; try { done = localStorage.getItem('kn.tutDone') === '1'; } catch {} if (!done) startTut(); }
 
 /* ---------- 点名・文字の表示非表示(🏷) ---------- */
 function renderLabelsBtn() { $('#btnLabels').classList.toggle('off', !labelsOn); $('#btnLabels').title = labelsOn ? '点名・文字を隠す' : '点名・文字を出す'; }
