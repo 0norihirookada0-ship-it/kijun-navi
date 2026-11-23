@@ -2,258 +2,311 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
-<title>ECP基準点ナビ(試作)</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#17324e">
+<title>ECP基準点ナビ</title>
+<!-- 地図の部品(Leaflet 1.9.4)はアプリと一緒に置く。外のサイトに頼らないので、LINE の中・電波の弱い所でも開く -->
+<link rel="stylesheet" href="lib/leaflet.css">
+<script src="lib/leaflet.js"></script>
 <style>
 :root{
-  --bg:#e9edf1; --panel:#ffffff; --ink:#132030; --muted:#566474; --line:#cfd6de;
-  --accent:#e8a300; --accent-ink:#1d1500; --navy:#17324e; --ok:#1d7f47; --warn:#b8332a;
-  --font:"BIZ UDPGothic","Hiragino Sans","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
+  --ink:#132030; --muted:#566474; --line:#cfd6de; --panel:#fff; --bg:#e9edf1;
+  --accent:#e8a300; --navy:#17324e; --ok:#1d7f47; --warn:#b8332a;
+  --barH:64px;
+  --font:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI","Meiryo",system-ui,sans-serif;
 }
-*{box-sizing:border-box}
-html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--font);
-  padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
-header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:14px 16px 10px}
-header h1{margin:0;font-size:19px}
-header .tag{font-size:12px;color:var(--muted)}
-nav{display:flex;gap:6px;flex-wrap:wrap;padding:0 16px 10px}
-nav button{font:inherit;font-weight:700;border:1px solid var(--line);background:var(--panel);color:var(--ink);
-  border-radius:8px;padding:8px 12px;cursor:pointer}
-nav button[aria-current=true]{background:var(--navy);color:#fff;border-color:var(--navy)}
-main{display:none;gap:14px;padding:0 16px 28px;max-width:720px;margin:0 auto}
-main.on{display:grid}
-section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:grid;gap:10px}
-section h2{margin:0;font-size:15px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%;overflow:hidden;background:#d9e0e7;color:var(--ink);font:15px/1.5 var(--font)}
+button{font:inherit;color:inherit}
+#map{position:fixed;inset:0;background:#eef1f4}
+#map.blank{background:#fbfbf8}
+/* 上: 座標の帯 */
+#top{position:fixed;left:0;right:0;top:0;z-index:1000;padding:calc(env(safe-area-inset-top,0px) + 6px) 8px 0;pointer-events:none}
+#top > *{pointer-events:auto}
+.coord{background:rgba(23,50,78,.94);color:#fff;border-radius:10px;padding:6px 10px 7px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.c1{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap}
+.zone{border:1px solid rgba(255,255,255,.55);background:transparent;border-radius:12px;padding:1px 9px;font-size:13px;font-weight:700;cursor:pointer}
+.xy{display:inline-flex;align-items:baseline;gap:4px;white-space:nowrap}
+.xy small{font-size:12px;opacity:.85}
+.xy b{font-size:23px;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.c2{display:flex;flex-wrap:wrap;gap:0 12px;font-size:12.5px;opacity:.95;margin-top:1px}
+.c2 b{font-weight:700;font-variant-numeric:tabular-nums}
+.acc{padding:0 7px;border-radius:9px;font-weight:700}
+.acc.good{background:#2e8b57}.acc.mid{background:#b07800}.acc.bad{background:#b8332a}
+#geoMsg{margin:6px 0 0;padding:7px 9px;border-radius:8px;background:#fff4e5;color:#5a2d00;font-size:13px;line-height:1.55}
+#geoMsg b{display:block;font-size:14px;color:#8a1c12}
+#geoMsg ol{margin:2px 0 0;padding-left:1.3em}
+#btnCompass{margin-top:6px;width:100%;border:0;border-radius:8px;background:var(--accent);color:#1d1500;font-weight:700;padding:9px}
+.banner{margin-bottom:6px;background:#fdeceb;border:1px solid var(--warn);color:#7a1f18;border-radius:10px;padding:8px 10px;font-size:13px}
+.banner b{display:block;font-size:14px}
+/* 目的の点への案内 */
+#navCard{position:fixed;left:8px;right:8px;z-index:1000;bottom:calc(var(--barH) + env(safe-area-inset-bottom,0px) + 10px);
+  margin-right:64px;background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.25);padding:8px 10px;display:flex;align-items:center;gap:10px}
+#nArrow{width:46px;height:46px;flex:none;transition:transform .2s linear}
+#nDist{font-size:26px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;line-height:1.1}
+#nName{font-weight:700}
+#nInfo{font-size:12px;color:var(--muted)}
+#nClose{margin-left:auto;flex:none;white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px}
+#navCard > div{min-width:0}
+/* 右下: 現在地・カメラ */
+#fabs{position:fixed;right:10px;z-index:1000;bottom:calc(var(--barH) + env(safe-area-inset-bottom,0px) + 10px);display:grid;gap:10px}
+#fabs button{width:52px;height:52px;border-radius:50%;border:0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3);font-size:23px;cursor:pointer}
+#fabs button.on{background:var(--navy);color:#fff}
+/* 下: ボタンの帯 */
+#bar{position:fixed;left:0;right:0;bottom:0;z-index:1000;height:calc(var(--barH) + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);
+  background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr)}
+#bar button{border:0;background:transparent;display:grid;place-items:center;align-content:center;gap:0;font-size:22px;cursor:pointer}
+#bar button span{font-size:12.5px;font-weight:700}
+#bar button.on{color:var(--navy);background:#eef2f8}
+/* 下から出る欄 */
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:1100;max-height:72vh;overflow:auto;background:#fff;border-radius:14px 14px 0 0;
+  box-shadow:0 -4px 16px rgba(0,0,0,.25);padding:0 14px calc(env(safe-area-inset-bottom,0px) + 14px)}
+.sh-head{position:sticky;top:0;background:#fff;display:flex;align-items:center;padding:12px 0 8px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.sh-head b{font-size:16px}
+.sh-head button{margin-left:auto;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:7px 14px;font-weight:700}
+[data-sheet]{display:none;gap:10px}
+[data-sheet].on{display:grid}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-label.f{display:grid;gap:2px;font-size:12px;color:var(--muted)}
-input,select{font:inherit;font-size:15px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
-button.big{font:inherit;font-weight:700;border:1px solid var(--line);background:var(--bg);color:var(--ink);
-  border-radius:8px;padding:10px 14px;min-height:46px;cursor:pointer}
-button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-button.big:disabled{opacity:.4;cursor:not-allowed;background:var(--bg);color:var(--muted);border-color:var(--line)}
-.filebtn{display:inline-flex;align-items:center;font-weight:700;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 14px;min-height:46px;cursor:pointer}
-.filebtn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 14px;min-height:44px;font-weight:700;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#1d1500}
+.btn.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.filebtn{position:relative;display:inline-flex;align-items:center}
 .filebtn input{position:absolute;opacity:0;width:1px;height:1px}
-.note{font-size:12px;color:var(--muted);margin:0}
-.msg{font-size:13px;margin:0}
-.msg.bad{color:var(--warn)} .msg.good{color:var(--ok)}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+.msg{font-size:13px;margin:0}.msg.bad{color:var(--warn)}.msg.good{color:var(--ok)}
+select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+h3{margin:6px 0 0;font-size:14px}
 table{border-collapse:collapse;width:100%;font-size:13px}
-th,td{border:1px solid var(--line);padding:4px 6px;text-align:left}
-th{background:#eef2f8}
+th,td{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left}
+td.num{font-variant-numeric:tabular-nums}
 tr.sel td{background:#fff3da}
-#leafletMap{width:100%;height:320px;background:#d9e0e7;border:1px solid var(--line);border-radius:6px}
-button.big[aria-current=true]{background:var(--navy);color:#fff;border-color:var(--navy)}
-.navbig{font-size:15px;text-align:center;padding:14px;background:#eef2f8;border-radius:8px;display:grid;gap:4px}
-.navbig .dist{font-size:40px;font-weight:700;color:var(--navy)}
-.navbig .arrow{font-size:46px;transition:transform .15s linear}
-.err{display:inline-block;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:700}
-.err.rough{background:#f3d9b1;color:#6b3d00}
-.err.cal{background:#cfe9d7;color:#0f5132}
-.err.rtk{background:#cfe0f5;color:#0b3d6b}
-/* 全画面共通: LINEの中で開いた警告・常時座標バー(2026-11-23) */
-.banner{margin:0 16px 10px;padding:10px 12px;border-radius:8px;font-size:13px;line-height:1.5}
-.banner.bad{background:#fdeceb;border:1px solid var(--warn);color:#7a1f18}
-.banner b{display:block;margin-bottom:2px;font-size:14px}
-.banner p{margin:0}
-.banner a,.banner span.lnk{color:var(--navy);font-weight:700;text-decoration:underline}
-#geoBar{margin:0 16px 10px;padding:8px 12px;border-radius:8px;background:var(--navy);color:#fff}
-.geobar-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
-.geobar-row.small{font-size:11.5px;opacity:.88;margin-top:2px}
-.geobar-zone{font-size:12px;padding:2px 8px;border:1px solid rgba(255,255,255,.5);border-radius:10px}
-.geobar-xy b{font-size:22px;font-variant-numeric:tabular-nums}
-.geobar-xy small{font-size:11px;opacity:.85;margin-right:6px}
-#geoErr{margin:4px 0 0;font-size:12.5px;color:#ffd9a3}
-#geoErr.bad{color:#ffb3a8}
-/* 地図画面の下部ボタン帯・カメラボタン・現在地マーカー */
-.basebar{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.basebar button{padding:8px 4px;font-size:12.5px}
-.curArrow{font-size:22px;line-height:28px;text-align:center;width:28px;height:28px;display:block;filter:drop-shadow(0 0 2px #fff)}
-.ptTri{width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:16px solid #e8a300;filter:drop-shadow(0 0 1px #fff)}
-.leaflet-tooltip.ptlabel{font-weight:700;background:rgba(0,0,0,.72);color:#fff;border:0;padding:1px 6px;font-size:12px}
+tr.pt{cursor:pointer}
+.ver{font-size:11.5px;color:var(--muted);text-align:right;margin:4px 0 0}
+/* 地図の上の印 */
+.ptTri{width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:16px solid var(--accent);filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #000)}
+.ptTri.sel{border-left-width:12px;border-right-width:12px;border-bottom:21px solid #ff5a00}
+.leaflet-tooltip.ptlabel{font-weight:700;background:rgba(0,0,0,.72);color:#fff;border:0;box-shadow:none;padding:1px 6px;font-size:12px}
+.leaflet-tooltip.ptlabel::before{display:none}
+.curIcon svg{display:block;transition:transform .2s linear}
+.leaflet-bottom{bottom:calc(var(--barH) + env(safe-area-inset-bottom,0px))}
+.leaflet-control-attribution{font-size:10px}
+/* 起動画面(点検つき) */
+#splash{position:fixed;inset:0;z-index:2000;background:#f4f6f8;color:var(--ink);overflow:auto;
+  padding:calc(env(safe-area-inset-top,0px) + 34px) 18px calc(env(safe-area-inset-bottom,0px) + 110px);transition:opacity .3s}
+#splash.out{opacity:0;pointer-events:none}
+.sp-head{display:flex;gap:10px;align-items:center;max-width:520px;margin:0 auto}
+.sp-ttl{font-size:23px;font-weight:800}
+.sp-ver{font-size:11.5px;color:var(--muted)}
+.sp-list{list-style:none;padding:0;margin:24px auto 0;display:grid;gap:10px;max-width:520px}
+.sp-list > li{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;font-size:15px;font-weight:700}
+.sp-list > li .s{width:22px;flex:none;text-align:center;font-weight:800}
+.sp-list li small{display:block;color:var(--muted);font-size:12.5px;font-weight:400;margin-top:2px;line-height:1.55}
+.sp-list li small ol{margin:2px 0 0;padding-left:1.25em}
+.sp-list > li.ok .s{color:var(--ok)}
+.sp-list > li.wait .s{color:#b07800}
+.sp-list > li.warn{border-color:#d9a400;background:#fff9e8}.sp-list > li.warn .s{color:#a06d00}
+.sp-list > li.ng{border-color:var(--warn);background:#fdeceb}.sp-list > li.ng .s{color:var(--warn)}
+.sp-btns{position:fixed;left:18px;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);display:grid;gap:8px;max-width:520px;margin:0 auto}
+.sp-go{border:0;border-radius:10px;background:var(--accent);color:#1d1500;font-weight:800;font-size:16px;padding:14px;cursor:pointer}
+.sp-go.sub{background:#fff;border:1px solid var(--line);color:var(--ink);font-weight:700}
+/* カメラ */
+#cam{position:fixed;inset:0;z-index:1200;background:#000}
+#cam video{width:100%;height:100%;object-fit:cover}
+#camOver{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 10px);display:grid;justify-items:center;gap:4px;color:#fff;text-shadow:0 0 4px #000}
+#camArrow{width:90px;height:90px;transition:transform .2s linear;filter:drop-shadow(0 0 3px #000)}
+#camDist{font-size:34px;font-weight:700}
+#camMsg{font-size:13px;max-width:90%;text-align:center}
+#camClose{position:absolute;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);border:0;border-radius:24px;background:#fff;padding:12px 22px;font-weight:700}
 </style>
 </head>
 <body>
+<!-- 起動画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
+<div id="splash">
+  <div class="sp-head">
+    <svg width="44" height="44" viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14 L78 70 L18 70 Z" fill="#e8a300" stroke="#17324e" stroke-width="5" stroke-linejoin="round"/></svg>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.2 試験中 ・ 株式会社ネクサス</div></div>
+  </div>
+  <ul class="sp-list">
+    <li id="chkLib" class="wait"><span class="s">…</span><div>地図の部品<small>読み込んでいます</small></div></li>
+    <li id="chkData" class="wait"><span class="s">…</span><div>保存した基準点・図面<small>調べています</small></div></li>
+    <li id="chkGeo" class="wait"><span class="s">…</span><div>位置情報<small>位置を測っています(屋外で数秒)</small></div></li>
+    <li id="chkOri" class="wait"><span class="s">…</span><div>向き(コンパス)<small>調べています</small></div></li>
+  </ul>
+  <div class="sp-btns">
+    <button id="spGo" class="sp-go" type="button">地図へ進む</button>
+  </div>
+</div>
+<div id="map"></div>
 
-<header><h1>ECP基準点ナビ</h1><span class="tag">試作 v0.1・社内実証前</span></header>
-<div id="lineWarn" class="banner bad" hidden>
-  <b>⚠ LINEの中で開いています</b>
-  <p>LINEのアプリ内ブラウザでは地図・位置情報が正しく動かないことがあります。画面右上の「…」(iPhone)または「⋮」(Android)から<span class="lnk" id="lineOpenHelp">「他のアプリで開く」「Safariで開く」「Chromeで開く」</span>を選んでください。</p>
-</div>
-<div id="geoBar">
-  <div class="geobar-row">
-    <span class="geobar-zone" id="geoZone">第6系</span>
-    <span class="geobar-xy"><small>X(北)</small><b id="geoX">---</b> <small>Y(東)</small><b id="geoY">---</b></span>
+<div id="top">
+  <div id="lineWarn" class="banner" hidden>
+    <b>⚠ LINE の中で開いています</b>
+    LINE の中では地図・位置が動かないことがあります。右上の「…」(iPhone)・「⋮」(Android)から「Safari で開く」「他のアプリで開く」を選んでください。
   </div>
-  <div class="geobar-row small">
-    <span id="geoBLH">B:--- L:--- H:---</span>
-    <span id="geoAcc">精度 ±---m</span>
+  <div class="coord">
+    <div class="c1">
+      <button class="zone" id="zoneChip" type="button">第6系</button>
+      <span class="xy"><small>X</small><b id="vX">---</b></span>
+      <span class="xy"><small>Y</small><b id="vY">---</b></span>
+    </div>
+    <div class="c2">
+      <span>B <b id="vB">---</b></span>
+      <span>L <b id="vL">---</b></span>
+      <span>H <b id="vH">---</b></span>
+      <span id="vAcc" class="acc">精度 ---</span>
+      <span id="vState"></span>
+    </div>
+    <div id="geoMsg" hidden></div>
+    <button id="btnCompass" type="button" hidden>🧭 向きを使う(ここを押して許可)</button>
   </div>
-  <p id="geoErr" class="msg" hidden></p>
 </div>
-<nav>
-  <button data-tab="open" aria-current="true">① ひらく</button>
-  <button data-tab="map">② 一覧・地図</button>
-  <button data-tab="go">③ ナビ</button>
-  <button data-tab="cal">④ 現地合わせ</button>
-  <button data-tab="ar">⑤ AR</button>
+
+<div id="navCard" hidden>
+  <svg id="nArrow" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3 L40 42 L24 33 L8 42 Z" fill="#e8a300" stroke="#17324e" stroke-width="2.5" stroke-linejoin="round"/></svg>
+  <div>
+    <div>目的 <span id="nName"></span></div>
+    <div id="nDist">--- m</div>
+    <div id="nInfo"></div>
+  </div>
+  <button id="nClose" type="button">やめる</button>
+</div>
+
+<div id="fabs">
+  <button id="btnHere" type="button" title="現在地に戻る" aria-label="現在地に戻る">◎</button>
+  <button id="btnCam" type="button" title="カメラ" aria-label="カメラ">📷</button>
+</div>
+
+<nav id="bar">
+  <button id="bMap" type="button">🗺️<span>地図切替</span></button>
+  <button id="bPts" type="button">📍<span>基準点</span></button>
+  <button id="bDwg" type="button">📐<span>図面</span></button>
 </nav>
 
-<main class="on" data-tab="open">
-  <section>
-    <h2>データを読む</h2>
-    <p class="note">このアプリに現場の座標はあらかじめ入っていません。LINE等で受け取った図面・基準点のファイルを、下のボタンでスマホ内から選んでください。</p>
+<div id="sheet" hidden>
+  <div class="sh-head"><b id="shTitle"></b><button id="shClose" type="button">閉じる</button></div>
+
+  <section data-sheet="map">
+    <div class="row" id="baseBtns">
+      <button class="btn on" data-base="std" type="button">🗺️ 地理院</button>
+      <button class="btn" data-base="pale" type="button">📄 淡色</button>
+      <button class="btn" data-base="photo" type="button">🛰️ 写真</button>
+      <button class="btn" data-base="blank" type="button">⬜ 白(地図なし)</button>
+    </div>
+    <p class="note">背景は国土地理院の地理院タイル。一度見た範囲は端末に残るので、電波が弱い所でも出ます(最大 約2,000枚。古いものから消します)。白にすると一番軽くなります。</p>
+    <p class="note" id="swMsg"></p>
+    <div class="row"><button class="btn" id="btnClearCache" type="button">保存した地図を消す</button></div>
+  </section>
+
+  <section data-sheet="pts">
     <div class="row">
-      <label class="filebtn primary">📐 図面を選ぶ(DXF)<input id="fDxf" type="file" accept=".dxf"></label>
-      <label class="filebtn primary">📍 基準点を選ぶ(CSV/SIMA)<input id="fPts" type="file" accept=".csv,.sim,.txt"></label>
-      <button class="big" id="btnDemo" type="button">試しに使う(ダミー点)</button>
+      <label class="btn primary filebtn">📍 基準点を読む(CSV・SIMA)<input id="fPts" type="file" accept=".csv,.sim,.txt"></label>
+      <button class="btn" id="btnDemo" type="button">試しに使う(ダミー点)</button>
     </div>
-    <p class="note">基準点CSV: 点名,X,Y,H(1行目は見出しでも可)。SIMA: A01行(点番,点名,X,Y,Z)。図面DXF: 点・線・ポリラインを平面図に重ねて表示します(文字・ハッチ等は表示しません)。</p>
-    <p id="loadMsg" class="msg"></p>
-    <p id="dxfMsg" class="msg"></p>
-  </section>
-  <section>
-    <h2>座標系</h2>
-    <div class="grid2">
-      <label class="f">平面直角座標系<select id="zone"></select></label>
-      <label class="f">緯度・経度の測地系<select id="datum"><option value="jgd2011" selected>JGD2011(世界測地系)</option></select></label>
-    </div>
-    <p class="note">既定は第Ⅵ系(京都・大阪・奈良・和歌山・三重・滋賀・福井)。原点はGSIの公式表どおり。</p>
-  </section>
-</main>
-
-<main data-tab="map">
-  <section>
-    <h2>点の一覧</h2>
-    <table id="ptTable"><thead><tr><th>点名</th><th>X(北)</th><th>Y(東)</th><th>H</th><th></th></tr></thead><tbody></tbody></table>
-  </section>
-  <section>
-    <h2>地図</h2>
-    <div class="basebar">
-      <button class="big" id="btnBaseStd" type="button" aria-current="true">🗺️ 地理院</button>
-      <button class="big" id="btnBasePale" type="button">📄 淡色</button>
-      <button class="big" id="btnBaseAir" type="button">🛰️ 写真</button>
-      <button class="big" id="btnBaseBlank" type="button">⬜ 白図</button>
-    </div>
-    <div class="row">
-      <label class="filebtn">📐 図面<input id="fDxf2" type="file" accept=".dxf"></label>
-      <label class="filebtn">📍 基準点<input id="fPts2" type="file" accept=".csv,.sim,.txt"></label>
-      <button class="big" id="btnMapHere" type="button">📍 現在地に戻る</button>
-      <button class="big" id="btnCamera" type="button">📷 カメラ</button>
-    </div>
-    <div id="leafletMap"></div>
-    <p class="note">現在地(矢印。向いている方向を指す)と基準点(オレンジの三角+点名)。背景地図・写真は国土地理院の地理院タイルを使用。</p>
-    <p id="tileMsg" class="note"></p>
-  </section>
-</main>
-
-<main data-tab="go">
-  <section>
-    <h2>目的の点: <span id="goTarget">(未選択)</span></h2>
-    <div class="navbig">
-      <div class="arrow" id="goArrow">↑</div>
-      <div class="dist" id="goDist">--- m</div>
-      <div id="goErr"></div>
-    </div>
-    <button class="big primary" id="btnGoStart" type="button">現在地の案内を始める</button>
-    <p id="goMsg" class="msg"></p>
-  </section>
-</main>
-
-<main data-tab="cal">
-  <section>
-    <h2>現地合わせ(2点以上)</h2>
-    <p class="note">現地で分かっている基準点の真上に立ち、一覧からその点を選んで「ここでタップ」。2点以上(4点以上で外れ値を自動で外す)。</p>
+    <p class="note">CSV は「点名,X,Y,H」(1行目が見出しでも可)。SIMA は A01 行。点を押すと、その点までの案内を始めます。</p>
+    <p id="ptsMsg" class="msg"></p>
+    <table id="ptTable"><thead><tr><th>点名</th><th>X(北)</th><th>Y(東)</th><th>H</th></tr></thead><tbody></tbody></table>
+    <h3>座標系</h3>
+    <div class="row"><select id="zone"></select><span class="note">既定は第6系(奈良・京都・大阪・和歌山・三重・滋賀・福井)</span></div>
+    <h3>現地合わせ(試験中)</h3>
+    <p class="note">分かっている基準点の真上に立ち、点を選んで「ここで記録」。2点以上で「計算」。上の X・Y と案内が合わせた後の値になります。</p>
     <div class="row">
       <select id="calPick"></select>
-      <button class="big" id="btnCalAdd" type="button">ここでタップ(現在地を記録)</button>
+      <button class="btn" id="btnCalAdd" type="button">ここで記録</button>
+      <button class="btn primary" id="btnCalRun" type="button">計算</button>
+      <button class="btn" id="btnCalClear" type="button">やり直す</button>
     </div>
     <table id="calTable"><thead><tr><th>点名</th><th>水平のずれ</th><th></th></tr></thead><tbody></tbody></table>
-    <button class="big primary" id="btnCalRun" type="button">位置合わせを計算</button>
     <p id="calMsg" class="msg"></p>
+    <p class="ver" id="verLine"></p>
   </section>
-</main>
 
-<main data-tab="ar">
-  <section>
-    <h2>AR表示</h2>
-    <p class="note">現場ARビューア.html と同じ流れ(WebXR)。先に④現地合わせを済ませておくと精度が上がります。</p>
-    <button class="big primary" id="btnAR" type="button" disabled>ARを開始</button>
-    <p id="arMsg" class="msg"></p>
+  <section data-sheet="dwg">
+    <div class="row">
+      <label class="btn primary filebtn">📐 図面を読む(DXF)<input id="fDxf" type="file" accept=".dxf"></label>
+      <button class="btn on" id="btnDwgShow" type="button">表示中</button>
+      <button class="btn" id="btnDwgFit" type="button">図面の全体へ</button>
+      <button class="btn" id="btnDwgClear" type="button">図面を外す</button>
+    </div>
+    <p id="dwgMsg" class="msg"></p>
+    <p class="note">線・ポリライン・円・点を地図に重ねます(文字・ハッチ・ブロックは出しません)。軽くするため、見えている範囲だけを描き、縮小しているときは短い線を省きます。図面は端末に残り、次に開いたときは地図が出たあとで読み出します。</p>
   </section>
-</main>
+</div>
+
+<div id="cam" hidden>
+  <video id="camVideo" playsinline muted autoplay></video>
+  <div id="camOver">
+    <svg id="camArrow" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3 L40 42 L24 33 L8 42 Z" fill="#e8a300" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>
+    <div id="camDist"></div>
+    <div id="camMsg"></div>
+  </div>
+  <button id="camClose" type="button">カメラを閉じる</button>
+</div>
 
 <script type="module">
+/* ---------- 起動画面の点検 ---------- */
+const CHK_MARK = { ok: '✓', wait: '…', warn: '!', ng: '!' };
+function chk(id, state, html) {
+  const li = document.getElementById(id); if (!li) return;
+  li.className = state; li.querySelector('.s').textContent = CHK_MARK[state];
+  li.querySelector('small').innerHTML = html;
+}
+/* 地図の部品が電波の途切れなどで読めなかったときは、2 回まで読み直す。駄目なら理由を出す */
+if (typeof window.L === 'undefined') {
+  for (let k = 0; k < 2 && typeof window.L === 'undefined'; k++) {
+    await new Promise(res => { const s = document.createElement('script'); s.src = `lib/leaflet.js?r=${Date.now()}`; s.onload = s.onerror = res; document.head.appendChild(s); });
+  }
+  if (typeof window.L === 'undefined') {
+    chk('chkLib', 'ng', '読めませんでした。電波の良い所で、下のボタンで読み込み直してください。');
+    const go = document.getElementById('spGo');
+    go.textContent = '読み込み直す'; go.onclick = () => location.reload();
+    throw new Error('Leaflet を読めません');
+  }
+}
+main();
+function main() {
 /* ============================================================
-   ECP基準点ナビ 試作。
-   流用元①: 現場ARビューア.html(ECP_DATA/00_司令塔/ECPアプリ) の WebXR 起動・タップ配置の流れ
-   流用元②: ecp-sekisan packages/modules-3d/src/ar.ts の alignPoints/alignPointsRobust/designToXr/xrToDesign を
-            同じ計算式のまま JavaScript に移植(P={e,n,z} 東・北・標高、ar={x,y,z} シーン座標 x=東 y=標高 z=-北)。
-   座標変換(平面直角座標⇔緯度経度)は 2026-11-23 にGSIの計算サイトと一致を確認した式を使用。
+   ECP基準点ナビ v0.2(2026-11-23)。
+   v0.1 からの直し: 地図を全面に・座標の帯・向き付きの現在地・基準点はオレンジの三角+点名・
+   図面は範囲と縮尺で間引き(裏で読み込み、2回目からは後から読み出す)・位置が取れない理由と直し方・
+   iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
+   座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-
+const VERSION = 'v0.2(2026-11-23)試験中';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function msg(sel, text, cls) { const el = $(sel); el.textContent = text; el.className = 'msg ' + (cls || ''); }
+$('#verLine').textContent = `ECP基準点ナビ ${VERSION}`;
 
-/* ---------- LINEのアプリ内ブラウザを検出(①の原因調査。2026-11-23) ----------
-   LINEの中で開くと、位置情報・Service Worker・地図タイルの一部が不安定になることがある。
-   UAに「Line/」が含まれる場合に警告を出し、外部ブラウザで開くよう案内する。 */
-const isLineApp = /\bLine\//.test(navigator.userAgent);
-if (isLineApp) $('#lineWarn').hidden = false;
-
-/* ---------- タブ切替 ---------- */
-function switchTab(name) {
-  const btn = $(`nav button[data-tab="${name}"]`);
-  if (!btn) return;
-  $$('nav button').forEach(x => x.removeAttribute('aria-current'));
-  btn.setAttribute('aria-current', 'true');
-  $$('main').forEach(m => m.classList.toggle('on', m.dataset.tab === name));
-  if (name === 'map') drawMap();
-  if (name === 'cal') fillCalPick();
+/* ---------- LINE の中で開いたとき: 外のブラウザで開き直す ----------
+   LINE は URL に openExternalBrowser=1 が付いていると、いつものブラウザ(Safari・Chrome)で開き直す。 */
+const isLineApp = /\bLine\//i.test(navigator.userAgent);
+if (isLineApp) {
+  const u = new URL(location.href);
+  if (u.searchParams.get('openExternalBrowser') !== '1') {
+    u.searchParams.set('openExternalBrowser', '1');
+    location.replace(u.toString());
+  }
+  $('#lineWarn').hidden = false;
 }
-$$('nav button').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
-$('#btnCamera')?.addEventListener('click', () => switchTab('ar'));
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-/* ---------- 平面直角座標系(GSIの原点。既定 第Ⅵ系) ----------
-   順に I系〜XIX系。原点緯度・経度(度)。出典: 国土地理院 公共測量 作業規程の準則 別表 */
+/* ---------- 平面直角座標系(GSI の原点) ---------- */
 const ZONES = [
-  { no: 1, lat: 33, lon: 129 + 30 / 60 },
-  { no: 2, lat: 33, lon: 131 },
-  { no: 3, lat: 36, lon: 132 + 10 / 60 },
-  { no: 4, lat: 33, lon: 133 + 30 / 60 },
-  { no: 5, lat: 36, lon: 134 + 20 / 60 },
-  { no: 6, lat: 36, lon: 136 },
-  { no: 7, lat: 36, lon: 137 + 10 / 60 },
-  { no: 8, lat: 36, lon: 138 + 30 / 60 },
-  { no: 9, lat: 36, lon: 139 + 50 / 60 },
-  { no: 10, lat: 40, lon: 140 + 50 / 60 },
-  { no: 11, lat: 44, lon: 140 + 15 / 60 },
-  { no: 12, lat: 44, lon: 142 + 15 / 60 },
-  { no: 13, lat: 44, lon: 144 + 15 / 60 },
-  { no: 14, lat: 26, lon: 142 },
-  { no: 15, lat: 26, lon: 127 + 30 / 60 },
-  { no: 16, lat: 26, lon: 124 },
-  { no: 17, lat: 26, lon: 131 },
-  { no: 18, lat: 20, lon: 136 },
-  { no: 19, lat: 26, lon: 154 },
+  { no: 1, lat: 33, lon: 129 + 30 / 60 }, { no: 2, lat: 33, lon: 131 }, { no: 3, lat: 36, lon: 132 + 10 / 60 },
+  { no: 4, lat: 33, lon: 133 + 30 / 60 }, { no: 5, lat: 36, lon: 134 + 20 / 60 }, { no: 6, lat: 36, lon: 136 },
+  { no: 7, lat: 36, lon: 137 + 10 / 60 }, { no: 8, lat: 36, lon: 138 + 30 / 60 }, { no: 9, lat: 36, lon: 139 + 50 / 60 },
+  { no: 10, lat: 40, lon: 140 + 50 / 60 }, { no: 11, lat: 44, lon: 140 + 15 / 60 }, { no: 12, lat: 44, lon: 142 + 15 / 60 },
+  { no: 13, lat: 44, lon: 144 + 15 / 60 }, { no: 14, lat: 26, lon: 142 }, { no: 15, lat: 26, lon: 127 + 30 / 60 },
+  { no: 16, lat: 26, lon: 124 }, { no: 17, lat: 26, lon: 131 }, { no: 18, lat: 20, lon: 136 }, { no: 19, lat: 26, lon: 154 },
 ];
 const zoneSel = $('#zone');
 ZONES.forEach(z => { const o = document.createElement('option'); o.value = z.no; o.textContent = `第${z.no}系`; zoneSel.appendChild(o); });
-zoneSel.value = 6; // 既定 第Ⅵ系(D-RTK3用変換と同じ)
+zoneSel.value = localStorage.getItem('kn.zone') || 6;
+const zoneNo = () => parseInt(zoneSel.value, 10);
 
-/* ---------- 緯度経度(度) → 平面直角座標(X=北,Y=東,m) ----------
-   GRS80楕円体・Snyderの横メルカトル厳密式(縮尺係数0.9999)。
-   2026-11-23、メーカーズ4期の基準点6点(第Ⅵ系)でGSIの計算サイト(vldb.gsi.go.jp)の結果と
-   X・Yとも1mm未満の差で一致することを確認済み(同フォルダの_test_coord2.mjsに検証コードあり)。
-   逆方向(平面座標→緯度経度、xy2latlon)は地図タイル表示のために追加。Snyderの逆横メルカトル式。
-   既知点でのミリ単位の一致・広範囲での往復一致を_test_coord_inverse.mjsで検算済み。 */
+/* GRS80・横メルカトル(縮尺係数 0.9999)。v0.1 と同じ式(GSI の計算サイトと 1mm 未満で一致を確認済み) */
 const A_ = 6378137.0, F_ = 1 / 298.257222101;
 const E2 = F_ * (2 - F_), EP2 = E2 / (1 - E2), K0 = 0.9999;
 function meridionalArc(phi) {
@@ -304,338 +357,585 @@ function xy2latlon(X, Y, zoneNo) {
   return { lat: phi * 180 / Math.PI, lon: lam * 180 / Math.PI };
 }
 
-/* ---------- 点データ ---------- */
+/* ---------- 地図 ---------- */
+const GSI_ATTR = '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>';
+const isTouch = matchMedia('(pointer:coarse)').matches;
+const map = L.map('map', { zoomControl: !isTouch, attributionControl: true, preferCanvas: true, maxZoom: 21 })
+  .setView([34.685, 135.805], 15); // 既定: 奈良県庁付近(データも現在地も無いとき)
+if (!isTouch) map.zoomControl.setPosition('bottomleft');
+window.__kn = { map, startGeo }; // 試験用(動作確認で地図を動かす・位置を測り直すため)
+chk('chkLib', 'ok', '読み込みました');
+
+/* 起動画面: 全部そろえば自動で地図へ。そろわなくても「地図へ進む」でいつでも入れる */
+const spState = { data: false, geo: 'wait', ori: 'wait' };
+let splashClosed = false;
+function closeSplash() {
+  if (splashClosed) return; splashClosed = true;
+  const sp = $('#splash'); sp.classList.add('out');
+  setTimeout(() => { sp.hidden = true; map.invalidateSize(); }, 320);
+}
+function maybeAutoClose() {
+  if (splashClosed) return;
+  const geoOk = spState.geo === 'ok' || spState.geo === 'warn';
+  const oriOk = spState.ori === 'ok' || spState.ori === 'warn';
+  if (spState.data && geoOk && oriOk) setTimeout(closeSplash, 900);
+}
+$('#spGo').addEventListener('click', () => { if (needsOriPermission && spState.ori !== 'ok') askCompass(); closeSplash(); });
+setTimeout(() => { if (!splashClosed && spState.geo === 'wait') $('#spGo').textContent = '地図へ進む(位置は測り続けます)'; }, 10000);
+const canvasR = L.canvas({ padding: 0.3 });
+const tileOpt = { attribution: GSI_ATTR, maxNativeZoom: 18, maxZoom: 21, crossOrigin: true, keepBuffer: 1, updateWhenIdle: true };
+const BASES = {
+  std: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', tileOpt),
+  pale: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', tileOpt),
+  photo: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', tileOpt),
+  blank: null,
+};
+let curBase = localStorage.getItem('kn.base') || 'std';
+function setBase(name) {
+  Object.values(BASES).forEach(l => l && map.removeLayer(l));
+  if (!(name in BASES)) name = 'std';
+  if (BASES[name]) BASES[name].addTo(map);
+  $('#map').classList.toggle('blank', name === 'blank');
+  curBase = name; localStorage.setItem('kn.base', name);
+  dwgLayer.setStyle({ color: name === 'photo' ? '#ffe14d' : '#2f3d4d' }); // 写真の上は黄色の線で見やすく
+  $$('#baseBtns button').forEach(b => b.classList.toggle('on', b.dataset.base === name));
+}
+$$('#baseBtns button').forEach(b => b.addEventListener('click', () => setBase(b.dataset.base)));
+
+const dwgLayer = L.polyline([], { renderer: canvasR, color: '#2f3d4d', weight: 1.3, opacity: .9, interactive: false, smoothFactor: 1.5 }).addTo(map);
+const dwgPtLayer = L.layerGroup().addTo(map);
+setBase(curBase); // 図面の線の色も背景に合わせるので、線の層を作ってから
+const ptLayer = L.layerGroup().addTo(map);
+const navLine = L.polyline([], { renderer: canvasR, color: '#ff5a00', weight: 3, dashArray: '8 6', interactive: false }).addTo(map);
+const accCircle = L.circle([0, 0], { renderer: canvasR, radius: 1, color: '#1565c0', weight: 1, fillOpacity: .12, interactive: false });
+const curSvg = '<svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="8" fill="#1565c0" stroke="#fff" stroke-width="3"/><path class="hd" d="M17 1 L24 13 L17 10 L10 13 Z" fill="#1565c0" stroke="#fff" stroke-width="1.5"/></svg>';
+const curMarker = L.marker([0, 0], { icon: L.divIcon({ className: 'curIcon', html: curSvg, iconSize: [34, 34], iconAnchor: [17, 17] }), interactive: false, keyboard: false, zIndexOffset: 1000 });
+
+/* ---------- 下の帯と欄 ---------- */
+const SHEETS = { map: '地図切替', pts: '基準点', dwg: '図面' };
+let openSheet = null;
+function showSheet(name) {
+  if (openSheet === name || !name) { $('#sheet').hidden = true; openSheet = null; }
+  else {
+    $('#sheet').hidden = false; openSheet = name;
+    $('#shTitle').textContent = SHEETS[name];
+    $$('[data-sheet]').forEach(s => s.classList.toggle('on', s.dataset.sheet === name));
+    if (name === 'pts') { renderPoints(); fillCalPick(); }
+  }
+  $('#bMap').classList.toggle('on', openSheet === 'map');
+  $('#bPts').classList.toggle('on', openSheet === 'pts');
+  $('#bDwg').classList.toggle('on', openSheet === 'dwg');
+}
+$('#bMap').addEventListener('click', () => showSheet('map'));
+$('#bPts').addEventListener('click', () => showSheet('pts'));
+$('#bDwg').addEventListener('click', () => showSheet('dwg'));
+$('#zoneChip').addEventListener('click', () => { showSheet(openSheet === 'pts' ? null : 'pts'); });
+$('#shClose').addEventListener('click', () => showSheet(null));
+
+/* ---------- 基準点 ---------- */
 let points = []; // {name,X,Y,H}
 let selectedIdx = -1;
-
-function parseCsvSima(text, name) {
-  const lines = text.split(/\r\n|\r|\n/).filter(l => l.trim());
+function decodeText(buf) {
+  // 現場のファイルは Shift_JIS のことが多い。UTF-8 で読めなければ Shift_JIS で読む
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+  catch { return new TextDecoder('shift_jis').decode(buf); }
+}
+function parseCsvSima(text) {
   const out = [];
-  for (const line of lines) {
-    const cols = line.split(',');
+  for (const line of text.split(/\r\n|\r|\n/)) {
+    if (!line.trim()) continue;
+    const cols = line.split(',').map(s => s.trim());
     if (/^A01/.test(line) && cols.length >= 5) {
-      out.push({ name: cols[2], X: parseFloat(cols[3]), Y: parseFloat(cols[4]), H: parseFloat(cols[5] ?? 0) });
+      const X = parseFloat(cols[3]), Y = parseFloat(cols[4]), H = parseFloat(cols[5] ?? '');
+      if (Number.isFinite(X) && Number.isFinite(Y)) out.push({ name: cols[2] || cols[1], X, Y, H: Number.isFinite(H) ? H : 0 });
       continue;
     }
     if (cols.length >= 3) {
-      const [a, b, c, d] = cols;
-      const X = parseFloat(b), Y = parseFloat(c), H = parseFloat(d ?? 0);
-      if (Number.isFinite(X) && Number.isFinite(Y)) out.push({ name: a.trim(), X, Y, H: Number.isFinite(H) ? H : 0 });
+      const X = parseFloat(cols[1]), Y = parseFloat(cols[2]), H = parseFloat(cols[3] ?? '');
+      if (Number.isFinite(X) && Number.isFinite(Y)) out.push({ name: cols[0].replace(/^'/, ''), X, Y, H: Number.isFinite(H) ? H : 0 });
     }
   }
   return out;
 }
-
+function savePoints() {
+  localStorage.setItem('kn.points', JSON.stringify(points));
+  localStorage.setItem('kn.sel', String(selectedIdx));
+}
+function setPoints(list, note) {
+  points = list; selectedIdx = -1; calPairs = []; calTransform = null;
+  savePoints(); renderPoints(); fillCalPick(); renderCalTable(); drawPoints(); fitData(); updateNav();
+  msg('#ptsMsg', note, 'good');
+}
 function renderPoints() {
   const tb = $('#ptTable tbody'); tb.innerHTML = '';
   points.forEach((p, i) => {
     const tr = document.createElement('tr');
-    if (i === selectedIdx) tr.className = 'sel';
-    tr.innerHTML = `<td>${p.name}</td><td>${p.X.toFixed(3)}</td><td>${p.Y.toFixed(3)}</td><td>${p.H.toFixed(3)}</td>
-      <td><button class="big" data-i="${i}">選ぶ</button></td>`;
+    tr.className = 'pt' + (i === selectedIdx ? ' sel' : '');
+    tr.innerHTML = `<td>${esc(p.name)}</td><td class="num">${p.X.toFixed(3)}</td><td class="num">${p.Y.toFixed(3)}</td><td class="num">${p.H.toFixed(3)}</td>`;
+    tr.addEventListener('click', () => selectTarget(i, true));
     tb.appendChild(tr);
   });
-  $$('#ptTable button').forEach(b => b.addEventListener('click', () => {
-    selectedIdx = parseInt(b.dataset.i, 10);
-    renderPoints(); drawMap();
-    $('#goTarget').textContent = points[selectedIdx].name;
-  }));
 }
-
-async function loadPtsFile(f) {
-  if (!f) return;
+function selectTarget(i, close) {
+  selectedIdx = i; savePoints(); renderPoints(); drawPoints(); updateNav();
+  if (close) showSheet(null);
+  const p = points[i]; if (!p) return;
+  const ll = xy2latlon(p.X, p.Y, zoneNo());
+  if (curLL) map.fitBounds([[ll.lat, ll.lon], [curLL.lat, curLL.lon]], fitPad(19));
+  else map.setView([ll.lat, ll.lon], Math.max(map.getZoom(), 18));
+}
+function drawPoints() {
+  ptLayer.clearLayers();
+  const many = points.length > 150;
+  points.forEach((p, i) => {
+    const ll = xy2latlon(p.X, p.Y, zoneNo());
+    const sel = i === selectedIdx;
+    const icon = L.divIcon({ className: '', html: `<div class="ptTri${sel ? ' sel' : ''}"></div>`, iconSize: sel ? [24, 21] : [18, 16], iconAnchor: sel ? [12, 21] : [9, 16] });
+    const m = L.marker([ll.lat, ll.lon], { icon, zIndexOffset: sel ? 900 : 0 });
+    if (!many || sel) m.bindTooltip(esc(p.name), { permanent: true, direction: 'right', offset: [8, -8], className: 'ptlabel' });
+    m.on('click', () => selectTarget(i, false));
+    m.addTo(ptLayer);
+  });
+}
+$('#fPts').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   try {
-    points = parseCsvSima(await f.text(), f.name);
-    if (!points.length) throw new Error('点が見つかりません');
-    msg('#loadMsg', `${f.name}: ${points.length} 点を読み込みました。`, 'good');
-    renderPoints();
-    if ($('main[data-tab="map"]').classList.contains('on')) drawMap();
-  } catch (err) { msg('#loadMsg', `読込できません: ${err.message}`, 'bad'); }
-}
-$('#fPts').addEventListener('change', e => { loadPtsFile(e.target.files[0]); e.target.value = ''; });
-$('#fPts2')?.addEventListener('change', e => { loadPtsFile(e.target.files[0]); e.target.value = ''; });
+    const list = parseCsvSima(decodeText(await f.arrayBuffer()));
+    if (!list.length) throw new Error('点が見つかりません(CSV は 点名,X,Y,H の順)');
+    setPoints(list, `${f.name}: ${list.length} 点を読みました。点を押すと案内します。`);
+  } catch (err) { msg('#ptsMsg', `読めません: ${err.message}`, 'bad'); }
+});
 $('#btnDemo').addEventListener('click', () => {
-  // 実在の現場座標は使わない、動作確認用のダミー数値(架空の4点)
-  points = [
+  // 実在の現場座標は使わない、動作確認用のダミー(架空の4点)
+  setPoints([
     { name: 'D-1', X: 1000.000, Y: 2000.000, H: 100.000 },
     { name: 'D-2', X: 1050.000, Y: 2080.000, H: 101.200 },
     { name: 'D-3', X: 1090.000, Y: 2010.000, H: 99.500 },
     { name: 'D-4', X: 1030.000, Y: 1950.000, H: 100.800 },
-  ];
-  msg('#loadMsg', `ダミー点4点を読み込みました(動作確認用。実在の座標ではありません)。`, 'good');
-  renderPoints();
+  ], 'ダミー点 4 点を読みました(動作確認用。実在の座標ではありません)。');
 });
-function msg(sel, text, cls) { const el = $(sel); el.textContent = text; el.className = 'msg ' + (cls || ''); }
+zoneSel.addEventListener('change', () => {
+  localStorage.setItem('kn.zone', zoneSel.value);
+  $('#zoneChip').textContent = `第${zoneNo()}系`;
+  drawPoints(); rebuildDrawingLL(); refreshDrawing(); updateGeoView(); updateNav();
+});
+$('#zoneChip').textContent = `第${zoneNo()}系`;
 
-/* ---------- 図面(DXF)の点・線読込 ----------
-   ASCIIのDXFをグループコード/値の対で読み、ENTITIESのLINE・LWPOLYLINE・POLYLINE+VERTEX・
-   POINT・CIRCLEだけを平面図に重ねる簡易パーサ(文字・ハッチ・寸法線などは対象外)。 */
-let dxfGeom = { lines: [], points: [] };
-function parseDxf(text) {
+/* ---------- 図面(DXF)。読み込みは裏(Web Worker)で行い、画面を止めない ---------- */
+function parseDxfFlat(text) {
+  // LINE・LWPOLYLINE・POLYLINE+VERTEX・POINT・CIRCLE を、線分 [x1,y1,x2,y2,...] と点 [x,y,...] の平らな配列で返す
   const raw = text.split(/\r\n|\r|\n/);
-  const toks = [];
-  for (let i = 0; i + 1 < raw.length; i += 2) {
-    const code = parseInt(raw[i].trim(), 10);
-    toks.push({ code, value: raw[i + 1] === undefined ? '' : raw[i + 1].trim() });
-  }
-  const lines = [], points = [];
+  const segs = [], pts = [];
   let i = 0;
-  // ENTITIESセクションの開始を探す
-  while (i < toks.length && !(toks[i].code === 2 && toks[i].value === 'ENTITIES')) i++;
-  i++;
-  let cur = null, curType = null;
+  while (i + 1 < raw.length && !(raw[i].trim() === '2' && raw[i + 1].trim() === 'ENTITIES')) i += 2;
+  i += 2;
+  let type = null, cur = null;
   const flush = () => {
-    if (!cur) { cur = null; return; }
-    if (curType === 'LINE' && cur.x1 != null && cur.y1 != null && cur.x2 != null && cur.y2 != null) {
-      lines.push([{ x: cur.x1, y: cur.y1 }, { x: cur.x2, y: cur.y2 }]);
-    } else if ((curType === 'LWPOLYLINE' || curType === 'POLYLINE') && cur.verts && cur.verts.length >= 2) {
-      const vs = cur.verts;
-      for (let k = 0; k + 1 < vs.length; k++) lines.push([vs[k], vs[k + 1]]);
-      if (cur.closed && vs.length > 2) lines.push([vs[vs.length - 1], vs[0]]);
-    } else if (curType === 'POINT' && cur.x != null && cur.y != null) {
-      points.push({ x: cur.x, y: cur.y });
-    } else if (curType === 'CIRCLE' && cur.cx != null && cur.cy != null && cur.r) {
-      const n = 24, poly = [];
-      for (let k = 0; k <= n; k++) { const a = 2 * Math.PI * k / n; poly.push({ x: cur.cx + cur.r * Math.cos(a), y: cur.cy + cur.r * Math.sin(a) }); }
-      for (let k = 0; k < n; k++) lines.push([poly[k], poly[k + 1]]);
-    }
-    cur = null; curType = null;
-  };
-  for (; i < toks.length; i++) {
-    const t = toks[i];
-    if (t.code === 0) {
-      if (t.value === 'ENDSEC') { flush(); break; }
-      flush();
-      if (['LINE', 'LWPOLYLINE', 'POLYLINE', 'POINT', 'CIRCLE', 'VERTEX'].includes(t.value)) {
-        if (t.value === 'VERTEX') {
-          if (cur && curType === 'POLYLINE') { /* 直前のPOLYLINEへ頂点を追加し続ける */ }
-          else { cur = null; curType = null; continue; }
-        } else {
-          curType = t.value;
-          cur = curType === 'LWPOLYLINE' || curType === 'POLYLINE' ? { verts: [], closed: false } : {};
+    if (!type || !cur) { type = null; cur = null; return; }
+    if (type === 'LINE') { if ([cur.x1, cur.y1, cur.x2, cur.y2].every(Number.isFinite)) segs.push(cur.x1, cur.y1, cur.x2, cur.y2); }
+    else if (type === 'LWPOLYLINE' || type === 'POLYLINE') {
+      const v = cur.v.filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+      for (let k = 0; k + 1 < v.length; k++) segs.push(v[k].x, v[k].y, v[k + 1].x, v[k + 1].y);
+      if (cur.closed && v.length > 2) segs.push(v[v.length - 1].x, v[v.length - 1].y, v[0].x, v[0].y);
+    } else if (type === 'POINT') { if (Number.isFinite(cur.x) && Number.isFinite(cur.y)) pts.push(cur.x, cur.y); }
+    else if (type === 'CIRCLE') {
+      if (Number.isFinite(cur.cx) && Number.isFinite(cur.cy) && cur.r > 0) {
+        const n = 24;
+        for (let k = 0; k < n; k++) {
+          const a1 = 2 * Math.PI * k / n, a2 = 2 * Math.PI * (k + 1) / n;
+          segs.push(cur.cx + cur.r * Math.cos(a1), cur.cy + cur.r * Math.sin(a1), cur.cx + cur.r * Math.cos(a2), cur.cy + cur.r * Math.sin(a2));
         }
       }
+    }
+    type = null; cur = null;
+  };
+  for (; i + 1 < raw.length; i += 2) {
+    const code = parseInt(raw[i], 10), val = raw[i + 1].trim();
+    if (code === 0) {
+      if (val === 'VERTEX' && type === 'POLYLINE') { cur.inVertex = true; continue; }
+      if (val === 'SEQEND' && type === 'POLYLINE') { flush(); continue; }
+      if (type !== 'POLYLINE' || val !== 'VERTEX') flush();
+      if (val === 'ENDSEC') break;
+      if (val === 'LINE' || val === 'POINT' || val === 'CIRCLE') { type = val; cur = {}; }
+      else if (val === 'LWPOLYLINE' || val === 'POLYLINE') { type = val; cur = { v: [], closed: false }; }
       continue;
     }
-    if (!curType) continue;
-    if (curType === 'LINE') {
-      if (t.code === 10) cur.x1 = parseFloat(t.value);
-      if (t.code === 20) cur.y1 = parseFloat(t.value);
-      if (t.code === 11) cur.x2 = parseFloat(t.value);
-      if (t.code === 21) cur.y2 = parseFloat(t.value);
-    } else if (curType === 'LWPOLYLINE') {
-      if (t.code === 70) cur.closed = (parseInt(t.value, 10) & 1) === 1;
-      if (t.code === 10) cur.verts.push({ x: parseFloat(t.value), y: NaN });
-      if (t.code === 20) { const last = cur.verts[cur.verts.length - 1]; if (last) last.y = parseFloat(t.value); }
-    } else if (curType === 'POLYLINE') {
-      if (t.code === 70) cur.closed = (parseInt(t.value, 10) & 1) === 1;
-      if (t.code === 10) cur.verts.push({ x: parseFloat(t.value), y: NaN });
-      if (t.code === 20) { const last = cur.verts[cur.verts.length - 1]; if (last) last.y = parseFloat(t.value); }
-    } else if (curType === 'POINT') {
-      if (t.code === 10) cur.x = parseFloat(t.value);
-      if (t.code === 20) cur.y = parseFloat(t.value);
-    } else if (curType === 'CIRCLE') {
-      if (t.code === 10) cur.cx = parseFloat(t.value);
-      if (t.code === 20) cur.cy = parseFloat(t.value);
-      if (t.code === 40) cur.r = parseFloat(t.value);
+    if (!type) continue;
+    const num = parseFloat(val);
+    if (type === 'LINE') {
+      if (code === 10) cur.x1 = num; else if (code === 20) cur.y1 = num; else if (code === 11) cur.x2 = num; else if (code === 21) cur.y2 = num;
+    } else if (type === 'LWPOLYLINE') {
+      if (code === 70) cur.closed = (parseInt(val, 10) & 1) === 1;
+      else if (code === 10) cur.v.push({ x: num, y: NaN });
+      else if (code === 20 && cur.v.length) cur.v[cur.v.length - 1].y = num;
+    } else if (type === 'POLYLINE') {
+      if (code === 70 && !cur.inVertex) cur.closed = (parseInt(val, 10) & 1) === 1;
+      else if (code === 10 && cur.inVertex) cur.v.push({ x: num, y: NaN });
+      else if (code === 20 && cur.inVertex && cur.v.length) cur.v[cur.v.length - 1].y = num;
+    } else if (type === 'POINT') {
+      if (code === 10) cur.x = num; else if (code === 20) cur.y = num;
+    } else if (type === 'CIRCLE') {
+      if (code === 10) cur.cx = num; else if (code === 20) cur.cy = num; else if (code === 40) cur.r = num;
     }
   }
-  return { lines: lines.filter(l => Number.isFinite(l[0].x) && Number.isFinite(l[0].y) && Number.isFinite(l[1].x) && Number.isFinite(l[1].y)), points };
+  flush();
+  return { segs: new Float64Array(segs), pts: new Float64Array(pts) };
 }
-async function loadDxfFile(f) {
-  if (!f) return;
-  if (f.size > 15 * 1024 * 1024) msg('#dxfMsg', `${f.name}: ${(f.size / 1024 / 1024).toFixed(1)}MBと大きいため、読み込みに時間がかかることがあります…`, '');
-  try {
-    const geom = parseDxf(await f.text());
-    if (!geom.lines.length && !geom.points.length) throw new Error('対応する図形(LINE/LWPOLYLINE/POLYLINE/POINT/CIRCLE)が見つかりません');
-    dxfGeom = geom;
-    msg('#dxfMsg', `${f.name}: 線 ${geom.lines.length}本・点 ${geom.points.length}個を読み込みました。`, 'good');
-    if ($('main[data-tab="map"]').classList.contains('on')) drawMap();
-  } catch (err) { msg('#dxfMsg', `読込できません: ${err.message}`, 'bad'); }
+const WORKER_SRC = `${decodeText.toString()}\n${parseDxfFlat.toString()}\n
+onmessage = e => {
+  try { const g = parseDxfFlat(decodeText(e.data)); postMessage(g, [g.segs.buffer, g.pts.buffer]); }
+  catch (err) { postMessage({ error: String(err && err.message || err) }); }
+};`;
+function parseInWorker(buf) {
+  return new Promise((resolve, reject) => {
+    let w;
+    try { w = new Worker(URL.createObjectURL(new Blob([WORKER_SRC], { type: 'text/javascript' }))); }
+    catch { // Worker が使えない開き方のときは、その場で読む
+      try { resolve(parseDxfFlat(decodeText(buf))); } catch (e) { reject(e); }
+      return;
+    }
+    w.onmessage = e => { w.terminate(); e.data.error ? reject(new Error(e.data.error)) : resolve(e.data); };
+    w.onerror = e => { w.terminate(); reject(new Error(e.message || '読み込みに失敗')); };
+    w.postMessage(buf, [buf]);
+  });
 }
-$('#fDxf').addEventListener('change', e => { loadDxfFile(e.target.files[0]); e.target.value = ''; });
-$('#fDxf2')?.addEventListener('change', e => { loadDxfFile(e.target.files[0]); e.target.value = ''; });
 
-/* ---------- 地図(国土地理院タイル。地理院地図・淡色・写真・白図の切替、図面・基準点を重ねる) ----------
-   軽くする工夫(2026-11-23、社長の「重い」報告への対応):
-   ・preferCanvas でSVGでなくcanvas描画にする
-   ・位置を取るたびに全部を描き直さず、現在地マーカーだけ動かす(drawMapは図面・基準点を読んだ時とタブを開いた時だけ)
-   ・地図・航空写真はもとからタイル単位の読み込み(Leaflet標準) */
-const GSI_ATTR = '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>';
-let leafletMap = null, baseLayers = null, overlayGroup = null, curMarker = null;
-const BASE_IDS = { std: 'btnBaseStd', pale: 'btnBasePale', air: 'btnBaseAir', blank: 'btnBaseBlank' };
-function ensureMap() {
-  if (leafletMap) return;
-  leafletMap = L.map('leafletMap', { attributionControl: true, preferCanvas: true }).setView([34.685, 135.805], 15); // 既定: 奈良県庁付近
-  baseLayers = {
-    std: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', { attribution: GSI_ATTR, maxZoom: 18 }),
-    pale: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', { attribution: GSI_ATTR, maxZoom: 18 }),
-    air: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', { attribution: GSI_ATTR, maxZoom: 18 }),
-    blank: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/blank/{z}/{x}/{y}.png', { attribution: GSI_ATTR, maxZoom: 18 }),
-  };
-  baseLayers.std.addTo(leafletMap);
-  overlayGroup = L.layerGroup().addTo(leafletMap);
-  registerSW();
-  updateCurMarker();
+/* 図面の座標(DXF の x=東・y=北)を緯度経度に直して持つ。描くときは見えている範囲と縮尺で間引く */
+let dwgRaw = null;       // { name, segs, pts }(平面直角座標)
+let dwgLL = null;        // Float64Array [lat1,lon1,lat2,lon2,...]
+let dwgPtLL = null;      // Float64Array [lat,lon,...]
+let dwgLen = null;       // Float32Array 線分の長さ(度。東西は緯度で縮めた値)
+let dwgBounds = null;
+let dwgOrder = null;     // Uint32Array 長い順の並び
+let dwgShow = localStorage.getItem('kn.dwgShow') !== '0';
+const MAX_SEGS = 12000, MAX_DPTS = 400;
+function rebuildDrawingLL() {
+  if (!dwgRaw) { dwgLL = dwgPtLL = dwgLen = dwgOrder = null; dwgBounds = null; return; }
+  const z = zoneNo(), s = dwgRaw.segs, n = s.length / 4;
+  dwgLL = new Float64Array(n * 4); dwgLen = new Float32Array(n);
+  let s0 = 90, n0 = -90, w0 = 180, e0 = -180;
+  for (let k = 0; k < n; k++) {
+    const a = xy2latlon(s[4 * k + 1], s[4 * k], z), b = xy2latlon(s[4 * k + 3], s[4 * k + 2], z);
+    dwgLL[4 * k] = a.lat; dwgLL[4 * k + 1] = a.lon; dwgLL[4 * k + 2] = b.lat; dwgLL[4 * k + 3] = b.lon;
+    const c = Math.cos(a.lat * Math.PI / 180);
+    dwgLen[k] = Math.hypot(b.lat - a.lat, (b.lon - a.lon) * c);
+    s0 = Math.min(s0, a.lat, b.lat); n0 = Math.max(n0, a.lat, b.lat); w0 = Math.min(w0, a.lon, b.lon); e0 = Math.max(e0, a.lon, b.lon);
+  }
+  const p = dwgRaw.pts, m = p.length / 2;
+  dwgPtLL = new Float64Array(m * 2);
+  for (let k = 0; k < m; k++) {
+    const a = xy2latlon(p[2 * k + 1], p[2 * k], z);
+    dwgPtLL[2 * k] = a.lat; dwgPtLL[2 * k + 1] = a.lon;
+    s0 = Math.min(s0, a.lat); n0 = Math.max(n0, a.lat); w0 = Math.min(w0, a.lon); e0 = Math.max(e0, a.lon);
+  }
+  dwgBounds = (n + m) ? L.latLngBounds([s0, w0], [n0, e0]) : null;
+  dwgOrder = new Uint32Array(n);
+  for (let k = 0; k < n; k++) dwgOrder[k] = k;
+  dwgOrder.sort((a, b) => dwgLen[b] - dwgLen[a]);
 }
-function setBase(key) {
-  ensureMap();
-  for (const k in baseLayers) { leafletMap.removeLayer(baseLayers[k]); $('#' + BASE_IDS[k])?.removeAttribute('aria-current'); }
-  baseLayers[key].addTo(leafletMap);
-  $('#' + BASE_IDS[key])?.setAttribute('aria-current', 'true');
+function refreshDrawing() {
+  dwgPtLayer.clearLayers();
+  if (!dwgLL || !dwgShow) { dwgLayer.setLatLngs([]); return; }
+  const b = map.getBounds().pad(0.25);
+  const S = b.getSouth(), N = b.getNorth(), W = b.getWest(), E = b.getEast();
+  const cosLat = Math.cos(map.getCenter().lat * Math.PI / 180);
+  const pxDeg = (E - W) * cosLat / Math.max(1, map.getSize().x * 1.5); // 1 画素あたりの長さ(度)
+  const n = dwgLen.length;
+  // 長い線から順に見て、見えている範囲に入り、画面で 1 画素以上ある線を、上限まで拾う
+  // (境界・道路などの長い線が先に残り、細かい線は拡大すると出てくる)
+  const sel = [];
+  let inView = 0;
+  for (let j = 0; j < n; j++) {
+    const k = dwgOrder[j];
+    const la1 = dwgLL[4 * k], lo1 = dwgLL[4 * k + 1], la2 = dwgLL[4 * k + 2], lo2 = dwgLL[4 * k + 3];
+    if ((la1 < S && la2 < S) || (la1 > N && la2 > N) || (lo1 < W && lo2 < W) || (lo1 > E && lo2 > E)) continue;
+    inView++;
+    if (sel.length < MAX_SEGS && dwgLen[k] >= pxDeg) sel.push(k);
+  }
+  const idx = { length: inView };
+  const lines = new Array(sel.length);
+  for (let j = 0; j < sel.length; j++) {
+    const k = sel[j];
+    lines[j] = [[dwgLL[4 * k], dwgLL[4 * k + 1]], [dwgLL[4 * k + 2], dwgLL[4 * k + 3]]];
+  }
+  dwgLayer.setLatLngs(lines);
+  let shownPts = 0;
+  for (let k = 0; k < dwgPtLL.length / 2 && shownPts < MAX_DPTS; k++) {
+    const la = dwgPtLL[2 * k], lo = dwgPtLL[2 * k + 1];
+    if (la < S || la > N || lo < W || lo > E) continue;
+    L.circleMarker([la, lo], { renderer: canvasR, radius: 2, color: '#2f3d4d', weight: 1, interactive: false }).addTo(dwgPtLayer);
+    shownPts++;
+  }
+  const total = n;
+  $('#dwgMsg').textContent = dwgRaw ? `${dwgRaw.name}: 線 ${total.toLocaleString()} 本のうち、いま ${sel.length.toLocaleString()} 本を表示${sel.length < idx.length ? '(縮小中のため短い線を省略。拡大すると出ます)' : ''}` : '';
+  $('#dwgMsg').className = 'msg good';
 }
-$('#btnBaseStd').addEventListener('click', () => setBase('std'));
-$('#btnBasePale').addEventListener('click', () => setBase('pale'));
-$('#btnBaseAir').addEventListener('click', () => setBase('air'));
-$('#btnBaseBlank').addEventListener('click', () => setBase('blank'));
-$('#btnMapHere').addEventListener('click', async () => {
-  ensureMap();
-  await requestMotionPermission();
-  startWatch();
-  if (curLatLon) leafletMap.setView([curLatLon.latitude, curLatLon.longitude], 18);
+let refreshTimer = 0;
+map.on('moveend zoomend resize', () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(refreshDrawing, 60); });
+
+/* 図面は端末(IndexedDB)に残し、次は地図が出たあとで読み出す */
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('kijun-navi', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function idbPut(key, val) { const db = await idb(); return new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(val, key); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+async function idbGet(key) { const db = await idb(); return new Promise((res, rej) => { const r = db.transaction('kv').objectStore('kv').get(key); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function idbDel(key) { const db = await idb(); return new Promise(res => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').delete(key); t.oncomplete = res; t.onerror = res; }); }
+
+function setDrawing(d, fit) {
+  dwgRaw = d; rebuildDrawingLL(); refreshDrawing();
+  if (fit && dwgBounds) map.fitBounds(dwgBounds, fitPad(19));
+}
+$('#fDxf').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  msg('#dwgMsg', `${f.name}(${(f.size / 1024 / 1024).toFixed(1)}MB)を読んでいます…(地図はそのまま使えます)`, '');
+  const t0 = performance.now();
+  try {
+    const g = await parseInWorker(await f.arrayBuffer());
+    if (!g.segs.length && !g.pts.length) throw new Error('線・ポリライン・円・点が見つかりません');
+    const d = { name: f.name, segs: g.segs, pts: g.pts };
+    setDrawing(d, true);
+    dwgShow = true; localStorage.setItem('kn.dwgShow', '1'); $('#btnDwgShow').classList.add('on'); $('#btnDwgShow').textContent = '表示中';
+    idbPut('dxf', d).catch(() => {});
+    console.info(`DXF ${f.name}: ${(performance.now() - t0).toFixed(0)}ms`);
+  } catch (err) { msg('#dwgMsg', `読めません: ${err.message}`, 'bad'); }
 });
-function registerSW() {
-  if (!('serviceWorker' in navigator)) { msg('#tileMsg', 'オフライン保存はこの端末・この開き方では使えません(file://表示中など)。', ''); return; }
-  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
-    .then(reg => { msg('#tileMsg', '電波の弱い所でも、一度表示した範囲の地図・写真は端末に残ります。', ''); reg.update().catch(() => {}); })
-    .catch(() => msg('#tileMsg', 'オフライン保存はこの端末・この開き方では使えません。', ''));
+$('#btnDwgShow').addEventListener('click', () => {
+  dwgShow = !dwgShow; localStorage.setItem('kn.dwgShow', dwgShow ? '1' : '0');
+  $('#btnDwgShow').classList.toggle('on', dwgShow); $('#btnDwgShow').textContent = dwgShow ? '表示中' : '隠し中';
+  refreshDrawing();
+});
+$('#btnDwgShow').classList.toggle('on', dwgShow); $('#btnDwgShow').textContent = dwgShow ? '表示中' : '隠し中';
+$('#btnDwgFit').addEventListener('click', () => { if (dwgBounds) { map.fitBounds(dwgBounds, fitPad(19)); showSheet(null); } });
+$('#btnDwgClear').addEventListener('click', () => { setDrawing(null, false); idbDel('dxf'); msg('#dwgMsg', '図面を外しました。', ''); });
+
+// 上の座標の帯・下の案内とボタンに隠れないよう、見せる範囲の余白を取る
+function fitPad(maxZoom) {
+  const top = ($('#top').offsetHeight || 100) + 20;
+  const bottom = (!$('#navCard').hidden ? $('#navCard').offsetHeight + 20 : 0) + ($('#bar').offsetHeight || 64) + 30;
+  return { paddingTopLeft: [40, top], paddingBottomRight: [70, bottom], maxZoom };
 }
-function updateCurMarker() {
-  if (!leafletMap || !curLatLon) return;
-  const latlng = [curLatLon.latitude, curLatLon.longitude];
-  if (!curMarker) {
-    curMarker = L.marker(latlng, {
-      icon: L.divIcon({ className: '', html: '<div class="curArrow" id="curArrowEl">⬆</div>', iconSize: [28, 28], iconAnchor: [14, 14] }),
-      zIndexOffset: 1000,
-    }).addTo(leafletMap);
-  } else {
-    curMarker.setLatLng(latlng);
-  }
-  const el = document.getElementById('curArrowEl');
-  if (el) el.style.transform = `rotate(${heading}deg)`;
-}
-function drawMap() {
-  ensureMap();
-  setTimeout(() => leafletMap.invalidateSize(), 50); // タブが隠れていた間のサイズずれを直す
-  overlayGroup.clearLayers();
-  const zoneNo = parseInt(zoneSel.value, 10);
-  const latlngs = [];
-  dxfGeom.lines.forEach(([a, b]) => {
-    const p1 = xy2latlon(a.y, a.x, zoneNo), p2 = xy2latlon(b.y, b.x, zoneNo);
-    L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], { color: '#8a97a6', weight: 2 }).addTo(overlayGroup);
-    latlngs.push([p1.lat, p1.lon], [p2.lat, p2.lon]);
-  });
-  dxfGeom.points.forEach(p => {
-    const ll = xy2latlon(p.y, p.x, zoneNo);
-    L.circleMarker([ll.lat, ll.lon], { radius: 3, color: '#8a97a6', weight: 2 }).addTo(overlayGroup);
-    latlngs.push([ll.lat, ll.lon]);
-  });
-  points.forEach((p, i) => {
-    const ll = xy2latlon(p.X, p.Y, zoneNo);
-    const sel = i === selectedIdx;
-    const icon = L.divIcon({ className: '', html: `<div class="ptTri"${sel ? ' style="filter:drop-shadow(0 0 3px #17324e) brightness(1.2)"' : ''}></div>`, iconSize: [18, 16], iconAnchor: [9, 14] });
-    L.marker([ll.lat, ll.lon], { icon }).bindTooltip(p.name, { permanent: true, direction: 'right', className: 'ptlabel' }).addTo(overlayGroup);
-    latlngs.push([ll.lat, ll.lon]);
-  });
-  // 現在地が図面・基準点から大きく離れている(座標系の取り違え・試しデータなど)ときは、
-  // 両方を無理に収めようとして地図が極端に広がり、重く見えるのを防ぐ(図面側を優先)
-  if (curLatLon && latlngs.length) {
-    const b = L.latLngBounds(latlngs);
-    if (b.getCenter().distanceTo([curLatLon.latitude, curLatLon.longitude]) < 20000) {
-      latlngs.push([curLatLon.latitude, curLatLon.longitude]);
-    }
-  } else if (curLatLon) {
-    latlngs.push([curLatLon.latitude, curLatLon.longitude]);
-  }
-  if (latlngs.length) leafletMap.fitBounds(latlngs, { padding: [30, 30], maxZoom: 19 });
-  updateCurMarker();
+function fitData() {
+  const ll = points.map(p => { const a = xy2latlon(p.X, p.Y, zoneNo()); return [a.lat, a.lon]; });
+  let b = ll.length ? L.latLngBounds(ll) : null;
+  if (dwgBounds) b = b ? b.extend(dwgBounds) : L.latLngBounds(dwgBounds.getSouthWest(), dwgBounds.getNorthEast());
+  if (b) map.fitBounds(b, fitPad(19));
+  return !!b;
 }
 
-/* ---------- GPS 現在地(ページを開いたら自動で追跡を始め、常時バーと地図の矢印を更新する。
-   watchPositionは1つだけ(前は現在地ボタン・ナビ開始のたびに増えていき、これも「重い」原因の一つだった)。2026-11-23 ---------- */
-let curLatLon = null, curXY = null, geoWatchId = null, heading = 0;
-const posListeners = new Set(); // 位置が更新されるたびに呼ぶ処理(③ナビなど)を登録する
-function startWatch() {
-  if (geoWatchId != null) return; // 二重に始めない
-  if (!navigator.geolocation) { geoError('この端末・ブラウザは位置情報に対応していません。'); return; }
-  geoWatchId = navigator.geolocation.watchPosition(pos => {
-    curLatLon = pos.coords;
-    curXY = latlon2xy(pos.coords.latitude, pos.coords.longitude, parseInt(zoneSel.value, 10));
-    curXY.accuracy = pos.coords.accuracy;
-    geoOk();
-    updateGeoBar();
-    updateCurMarker();
-    for (const fn of posListeners) fn(curXY);
-  }, err => geoError(geoErrText(err)), { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
+/* ---------- 現在地(GPS) ---------- */
+let curLL = null, curXY = null, curAcc = null, curAlt = null, gpsHeading = null, watchId = null, follow = true, gotFirstFix = false;
+let geoFailTimer = 0;
+const fmtDMS = d => {
+  const s = d < 0 ? '-' : ''; d = Math.abs(d);
+  const D = Math.floor(d), Mf = (d - D) * 60, M = Math.floor(Mf), S = (Mf - M) * 60;
+  return `${s}${D}°${String(M).padStart(2, '0')}′${S.toFixed(2).padStart(5, '0')}″`;
+};
+function geoHelp(kind) {
+  const ios = isIOS;
+  const line = isLineApp ? '<li>LINE の中では許可が出ません。右上の「…」から「Safari で開く」「他のアプリで開く」で開き直す</li>' : '';
+  if (kind === 'insecure') return '<b>位置が取れません: 安全な接続(https)で開いていません</b>https://〜 の住所で開き直してください。';
+  if (kind === 'none') return '<b>位置が取れません: このブラウザは位置情報に対応していません</b>Safari(iPhone)か Chrome(Android)で開いてください。';
+  if (kind === 1) return ios
+    ? `<b>位置が取れません: 位置情報の許可がありません</b><ol>${line}<li>「設定」→「プライバシーとセキュリティ」→「位置情報サービス」をオン</li><li>同じ画面の下の「Safari Web サイト」→「このAppの使用中」を選び、「正確な位置情報」をオン</li><li>Safari のアドレス欄の「ぁあ」(または「AA」)→「Web サイトの設定」→「位置情報」を「許可」</li><li>このページを読み込み直す</li></ol>`
+    : `<b>位置が取れません: 位置情報の許可がありません</b><ol>${line}<li>スマホの「設定」→「位置情報」をオン</li><li>Chrome のアドレス欄の左のマーク →「権限」(または「サイトの設定」)→「位置情報」を「許可」</li><li>このページを読み込み直す</li></ol>`;
+  if (kind === 2) return `<b>位置が取れません: 端末が位置を測れていません</b><ol><li>${ios ? '「設定」→「プライバシーとセキュリティ」→「位置情報サービス」' : '「設定」→「位置情報」'}がオンか確かめる</li><li>建物の中・車の中なら、空の見える所へ出る</li><li>しばらく待つ(自動でやり直します)</li></ol>`;
+  if (kind === 3) return '<b>位置がまだ取れません(時間切れ)</b>GPS の電波が弱いようです。空の見える所でしばらく待ってください(自動でやり直します)。';
+  return '';
 }
-function geoErrText(err) {
-  if (err.code === 1) return '位置情報の利用が許可されていません。ブラウザの設定(アドレスバー左の鍵アイコン→サイトの設定、またはOSの設定→プライバシー→位置情報)でこのサイトの位置情報を許可してください。';
-  if (err.code === 2) return '位置情報を取得できません。屋外や窓際など電波の良い所でお試しください。';
-  if (err.code === 3) return '位置情報の取得に時間がかかっています。少し待つか、電波の良い場所でお試しください。';
-  return err.message || '位置情報エラー';
+function showGeoMsg(html) { const el = $('#geoMsg'); el.innerHTML = html; el.hidden = !html; }
+function startGeo() {
+  if (!window.isSecureContext && location.protocol !== 'file:') { showGeoMsg(geoHelp('insecure')); spGeo('ng', geoHelp('insecure')); return; }
+  if (!navigator.geolocation) { showGeoMsg(geoHelp('none')); spGeo('ng', geoHelp('none')); return; }
+  if (watchId != null) navigator.geolocation.clearWatch(watchId);
+  $('#vState').textContent = '位置を待っています…';
+  watchId = navigator.geolocation.watchPosition(onPos, onPosErr, { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
+  clearTimeout(geoFailTimer);
+  geoFailTimer = setTimeout(() => { if (!gotFirstFix) { showGeoMsg(geoHelp(3)); spGeo('ng', geoHelp(3)); } }, 25000);
 }
-function geoError(text) { const el = $('#geoErr'); el.textContent = '⚠ ' + text; el.hidden = false; el.className = 'msg bad'; }
-function geoOk() { $('#geoErr').hidden = true; }
-function updateGeoBar() {
-  if (!curXY || !curLatLon) return;
-  $('#geoZone').textContent = `第${zoneSel.value}系`;
-  $('#geoX').textContent = curXY.X.toFixed(3);
-  $('#geoY').textContent = curXY.Y.toFixed(3);
-  const h = curLatLon.altitude != null ? curLatLon.altitude.toFixed(1) + 'm' : '---';
-  $('#geoBLH').textContent = `B:${curLatLon.latitude.toFixed(6)}° L:${curLatLon.longitude.toFixed(6)}° H:${h}`;
-  $('#geoAcc').textContent = `精度 ±${Math.round(curLatLon.accuracy || 0)}m`;
+function spGeo(state, html) {
+  spState.geo = state;
+  chk('chkGeo', state, html.replace(/<b>(.*?)<\/b>/, '<b>$1</b><br>'));
+  maybeAutoClose();
 }
-async function requestMotionPermission() {
-  // iOS 13+はジェスチャー(ボタン押下)の中で許可を求めないと向きが取れない
+function onPos(pos) {
+  const c = pos.coords;
+  curLL = { lat: c.latitude, lon: c.longitude }; curAcc = c.accuracy; curAlt = c.altitude;
+  if (Number.isFinite(c.heading) && (c.speed ?? 0) > 0.7) gpsHeading = c.heading;
+  showGeoMsg('');
+  const first = !gotFirstFix; gotFirstFix = true;
+  if (first || spState.geo !== 'ok') {
+    if (c.accuracy > 100) spGeo('warn', `取れましたが粗い位置です(±${Math.round(c.accuracy)}m)。${isIOS ? '「設定」→「プライバシーとセキュリティ」→「位置情報サービス」→「Safari Web サイト」の「正確な位置情報」をオンにしてください。' : '屋外で少し待つと良くなります。'}`);
+    else spGeo('ok', `取れました(精度 ±${c.accuracy < 10 ? c.accuracy.toFixed(1) : Math.round(c.accuracy)}m)`);
+  }
+  updateGeoView(); updateNav();
+  if (first) {
+    // 最初の位置: データがあれば現在地と合わせて見せる。データが無ければ現在地へ
+    if (!points.length && !dwgBounds) map.setView([curLL.lat, curLL.lon], 18);
+  } else if (follow) map.panTo([curLL.lat, curLL.lon], { animate: true });
+}
+function onPosErr(err) {
+  if (err.code === 3 && gotFirstFix) return; // 取れたあとの一時的な時間切れは黙ってやり直す
+  showGeoMsg(geoHelp(err.code));
+  spGeo('ng', geoHelp(err.code));
+  $('#vState').textContent = '';
+  if (err.code !== 1) setTimeout(startGeo, 5000);
+}
+function correctedXY() {
+  if (!curXY) return null;
+  return calTransform ? calApply(curXY) : curXY;
+}
+function updateGeoView() {
+  if (!curLL) return;
+  curXY = latlon2xy(curLL.lat, curLL.lon, zoneNo());
+  const xy = correctedXY();
+  $('#vX').textContent = xy.X.toFixed(3);
+  $('#vY').textContent = xy.Y.toFixed(3);
+  $('#vB').textContent = fmtDMS(curLL.lat);
+  $('#vL').textContent = fmtDMS(curLL.lon);
+  $('#vH').textContent = Number.isFinite(curAlt) ? `${curAlt.toFixed(1)}m` : '---';
+  const acc = $('#vAcc');
+  acc.textContent = `精度 ±${curAcc < 10 ? curAcc.toFixed(1) : Math.round(curAcc)}m`;
+  acc.className = 'acc ' + (curAcc <= 5 ? 'good' : curAcc <= 30 ? 'mid' : 'bad');
+  $('#vState').textContent = calTransform ? '現地合わせ済み' : (curAcc > 100 ? (isIOS ? '粗い位置です(「正確な位置情報」がオフかも)' : '粗い位置です(屋外で待つ)') : '');
+  if (!map.hasLayer(curMarker)) { curMarker.addTo(map); accCircle.addTo(map); }
+  curMarker.setLatLng([curLL.lat, curLL.lon]);
+  accCircle.setLatLng([curLL.lat, curLL.lon]).setRadius(curAcc || 1);
+  renderHeading();
+}
+map.on('dragstart', () => { follow = false; $('#btnHere').classList.remove('on'); });
+$('#btnHere').addEventListener('click', () => {
+  askCompass();
+  follow = true; $('#btnHere').classList.add('on');
+  if (curLL) map.setView([curLL.lat, curLL.lon], Math.max(map.getZoom(), 18));
+  else startGeo();
+});
+
+/* ---------- 向き(コンパス) ----------
+   iPhone はボタンを押したときに許可を求めないと向きが取れない。Android は deviceorientationabsolute を使う。 */
+let heading = null, oriListening = false;
+function onOri(e) {
+  let h = null;
+  if (typeof e.webkitCompassHeading === 'number' && !Number.isNaN(e.webkitCompassHeading)) h = e.webkitCompassHeading;
+  else if (e.absolute && e.alpha != null) h = 360 - e.alpha;
+  if (h == null) return;
+  const so = (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (window.orientation || 0);
+  heading = (h + so + 360) % 360;
+  if (spState.ori !== 'ok') { spState.ori = 'ok'; chk('chkOri', 'ok', '取れています'); maybeAutoClose(); updateNav(); }
+  scheduleHeading();
+}
+function listenOri() {
+  if (oriListening) return; oriListening = true;
+  if ('ondeviceorientationabsolute' in window) window.addEventListener('deviceorientationabsolute', onOri);
+  else window.addEventListener('deviceorientation', onOri);
+}
+// 許可を求める手順が要るのは iPhone・iPad(iOS 13 以降)だけ。ほかは聞かずに向きを読む
+const needsOriPermission = isIOS && typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function';
+async function askCompass() {
+  if (!needsOriPermission) { listenOri(); return; }
   try {
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      await DeviceOrientationEvent.requestPermission();
+    const r = await DeviceOrientationEvent.requestPermission();
+    if (r === 'granted') { listenOri(); $('#btnCompass').hidden = true; chk('chkOri', 'wait', '許可されました。向きを読んでいます'); }
+    else {
+      $('#btnCompass').hidden = false; $('#btnCompass').textContent = '🧭 向きの許可がありません。Safari を開き直して、もう一度押して「許可」';
+      spState.ori = 'warn'; chk('chkOri', 'warn', '許可されませんでした。矢印は地図の上=北で出します。使うときは Safari でページを開き直し、上の「向きを使う」を押して「許可」。');
     }
-  } catch { /* 許可されなくても地図・位置自体は使えるので続行 */ }
+  } catch { $('#btnCompass').hidden = false; }
 }
-function onOrientation(e) {
-  const h2 = e.webkitCompassHeading ?? (e.alpha != null ? (360 - e.alpha) : null);
-  if (h2 != null) { heading = h2; updateCurMarker(); }
+if (needsOriPermission) {
+  $('#btnCompass').hidden = false;
+  chk('chkOri', 'ng', 'iPhone は許可がいります。下のボタンを押して「許可」を選んでください。');
+  $('#spGo').textContent = '🧭 向きを許可して始める';
+} else {
+  listenOri();
+  setTimeout(() => {
+    if (spState.ori === 'ok') return;
+    spState.ori = 'warn';
+    chk('chkOri', 'warn', 'この端末・ブラウザでは向きが取れません。矢印は地図の上=北で出します(歩くと GPS の進む向きで回ります)。');
+    maybeAutoClose();
+  }, 2500);
 }
-window.addEventListener('deviceorientationabsolute', onOrientation);
-window.addEventListener('deviceorientation', onOrientation);
-startWatch(); // ページを開いたら自動で位置を取り始める(常時バーに出すため)
-
-/* ---------- ③ ナビ(距離・方位) ---------- */
-function bearingDeg(from, to) {
-  // 平面直角座標は北=X・東=Y。方位角は北から時計回り
-  const dX = to.X - from.X, dY = to.Y - from.Y;
-  let az = Math.atan2(dY, dX) * 180 / Math.PI;
-  return (az + 360) % 360;
-}
-function updateGoDisplay() {
-  if (selectedIdx < 0 || !curXY) return;
-  const applied = calTransform ? calApply(curXY) : curXY;
-  const target = points[selectedIdx];
-  const dist = Math.hypot(target.X - applied.X, target.Y - applied.Y);
-  const az = bearingDeg(applied, target);
-  $('#goArrow').style.transform = `rotate(${(az - heading + 360) % 360}deg)`;
-  $('#goDist').textContent = `${dist.toFixed(1)} m`;
-  const errEl = $('#goErr');
-  if (calTransform) {
-    errEl.innerHTML = `<span class="err cal">現地合わせ後・見込み誤差 ${(calTransform.maxDh * 100).toFixed(0)}cm</span>`;
-  } else {
-    errEl.innerHTML = `<span class="err rough">GPS単体・見込み誤差 約${Math.round(curXY.accuracy || 10)}m(④現地合わせで精度向上)</span>`;
+$('#btnCompass').addEventListener('click', askCompass);
+let hdRaf = 0;
+function scheduleHeading() { if (!hdRaf) hdRaf = requestAnimationFrame(() => { hdRaf = 0; renderHeading(); }); }
+function curHeading() { return heading ?? gpsHeading; }
+function renderHeading() {
+  const h = curHeading();
+  const el = curMarker.getElement && curMarker.getElement();
+  if (el) {
+    const svg = el.querySelector('svg'), hd = el.querySelector('.hd');
+    if (hd) hd.style.display = h == null ? 'none' : '';
+    if (svg && h != null) svg.style.transform = `rotate(${h}deg)`;
   }
-  msg('#goMsg', '現在地を取得中…(移動すると更新されます)', 'good');
+  updateNavArrow();
 }
-posListeners.add(updateGoDisplay);
-$('#btnGoStart').addEventListener('click', async () => {
-  if (selectedIdx < 0) { msg('#goMsg', '②一覧・地図で目的の点を選んでください', 'bad'); return; }
-  msg('#goMsg', '現在地を取得しています…', '');
-  await requestMotionPermission();
-  startWatch();
-  updateGoDisplay();
+
+/* ---------- 目的の点への案内 ---------- */
+function bearingDeg(from, to) { // 北=X・東=Y。北から時計回り
+  return (Math.atan2(to.Y - from.Y, to.X - from.X) * 180 / Math.PI + 360) % 360;
+}
+let navAz = null;
+function updateNav() {
+  const p = points[selectedIdx];
+  if (!p) { $('#navCard').hidden = true; navLine.setLatLngs([]); navAz = null; return; }
+  $('#navCard').hidden = false;
+  $('#nName').textContent = p.name;
+  const tll = xy2latlon(p.X, p.Y, zoneNo());
+  const xy = correctedXY();
+  if (!xy) {
+    $('#nDist').textContent = '--- m'; $('#nInfo').textContent = '現在地を待っています'; navLine.setLatLngs([]); navAz = null;
+  } else {
+    const d = Math.hypot(p.X - xy.X, p.Y - xy.Y);
+    navAz = bearingDeg(xy, p);
+    $('#nDist').textContent = d < 10 ? `${d.toFixed(2)} m` : `${d.toFixed(1)} m`;
+    const err = calTransform ? `現地合わせ後・見込み ±${Math.max(1, Math.round(calTransform.maxDh * 100))}cm` : `GPS だけ・見込み ±${Math.round(curAcc || 10)}m`;
+    $('#nInfo').textContent = `${err}${curHeading() == null ? '・矢印は地図の上=北' : ''}`;
+    navLine.setLatLngs([[curLL.lat, curLL.lon], [tll.lat, tll.lon]]);
+  }
+  updateNavArrow();
+}
+function updateNavArrow() {
+  if (navAz == null) return;
+  const h = curHeading();
+  const rel = (navAz - (h ?? 0) + 360) % 360; // 向きが無いときは北が上の地図に対する向き
+  $('#nArrow').style.transform = `rotate(${rel}deg)`;
+  $('#camArrow').style.transform = `rotate(${rel}deg)`;
+  if (!$('#cam').hidden) {
+    $('#camDist').textContent = $('#nDist').textContent;
+    $('#camMsg').textContent = `${points[selectedIdx]?.name ?? ''}${h == null ? '(向きが取れていません。矢印は北が上)' : ''}`;
+  }
+}
+$('#nClose').addEventListener('click', () => { selectedIdx = -1; savePoints(); drawPoints(); renderPoints(); updateNav(); });
+
+/* ---------- 右下のカメラ: 後ろのカメラの映像に、目的の点への矢印と距離を重ねる(試験中) ---------- */
+let camStream = null;
+$('#btnCam').addEventListener('click', async () => {
+  askCompass();
+  if (selectedIdx < 0) { showSheet('pts'); msg('#ptsMsg', 'カメラで案内する点を、下の一覧から選んでください。', 'bad'); return; }
+  $('#cam').hidden = false;
+  $('#camMsg').textContent = 'カメラを起動しています…';
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+    $('#camVideo').srcObject = camStream;
+    updateNavArrow();
+  } catch (err) {
+    $('#camMsg').textContent = isIOS
+      ? 'カメラが使えません。「設定」→「Safari」→「カメラ」を「許可」にして、読み込み直してください。'
+      : 'カメラが使えません。Chrome のアドレス欄の左のマーク →「権限」→「カメラ」を許可してください。';
+  }
+});
+$('#camClose').addEventListener('click', () => {
+  $('#cam').hidden = true;
+  if (camStream) camStream.getTracks().forEach(t => t.stop());
+  camStream = null; $('#camVideo').srcObject = null;
 });
 
 /* ============================================================
-   ④ 現地合わせ: ar.ts の alignPoints / alignPointsRobust を
-   同じ計算式のまま移植(P={e,n,z}、ar座標={x,y,z} x=東 y=高さ z=-北)。
+   現地合わせ: v0.1 と同じ式(ecp-sekisan packages/modules-3d/src/ar.ts の alignPoints を移植。
+   P={e,n,z}、ar 座標={x,y,z} x=東 y=高さ z=-北)。
    ============================================================ */
 const AR_WARN_M = 0.1, AR_WARN_RATIO = 0.02;
 function designToXr(p, T) {
@@ -680,47 +980,7 @@ function alignPoints(pairs, ref = pairs[0]?.design) {
   if (warn) message += '。ずれが大きいので合わせ直してください';
   return { ...T, residuals, warn, message, maxDh };
 }
-
-let calPairs = []; // {label, design:{e,n,z}, ar:{x,y,z}}
-let calTransform = null;
-function fillCalPick() {
-  const sel = $('#calPick'); sel.innerHTML = '';
-  points.forEach((p, i) => { const o = document.createElement('option'); o.value = i; o.textContent = p.name; sel.appendChild(o); });
-}
-function renderCalTable() {
-  const tb = $('#calTable tbody'); tb.innerHTML = '';
-  calPairs.forEach((p, i) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${p.label}</td><td>${calTransform ? (calTransform.residuals[i]?.dh * 100).toFixed(0) + 'cm' : '-'}</td>
-      <td><button class="big" data-i="${i}">消す</button></td>`;
-    tb.appendChild(tr);
-  });
-  $$('#calTable button').forEach(b => b.addEventListener('click', () => {
-    calPairs.splice(parseInt(b.dataset.i, 10), 1); renderCalTable();
-  }));
-}
-$('#btnCalAdd').addEventListener('click', () => {
-  const idx = parseInt($('#calPick').value, 10);
-  if (!Number.isInteger(idx) || !points[idx]) { msg('#calMsg', '点を選んでください', 'bad'); return; }
-  if (!curXY) { msg('#calMsg', '現在地をまだ取得していません。③ナビを一度開いてください', 'bad'); return; }
-  const p = points[idx];
-  // GPSの現在地(緯度経度→平面座標)を「AR座標」の代わりに使う(x=東, z=-北 の約束に合わせる)
-  const ar = { x: curXY.Y, y: 0, z: -curXY.X };
-  calPairs.push({ label: p.name, design: { e: p.Y, n: p.X, z: p.H }, ar });
-  renderCalTable();
-  msg('#calMsg', `${p.name} を記録しました(${calPairs.length}点)`, 'good');
-});
-$('#btnCalRun').addEventListener('click', () => {
-  try {
-    calTransform = alignPoints(calPairs);
-    renderCalTable();
-    msg('#calMsg', calTransform.message, calTransform.warn ? 'bad' : 'good');
-  } catch (e) { msg('#calMsg', e.message, 'bad'); }
-});
 function calApply(xy) {
-  // 現在地(平面座標)に、位置合わせ(designToXrの逆演算)を適用して補正後の位置を返す。
-  // xr.x=東(Y)・xr.z=-北(X) として扱うのは designToXr と同じ約束(arLocalと同じ軸)。
-  // _test_align.mjs で、既知のずれ(平行移動+回転)を完全に復元できることを確認済み。
   if (!calTransform) return xy;
   const T = calTransform;
   const A = xy.Y - T.t.x;
@@ -729,24 +989,71 @@ function calApply(xy) {
   const u = A * c + B * s, v = B * c - A * s;
   return { X: T.ref.n + v, Y: T.ref.e + u };
 }
+let calPairs = [], calTransform = null;
+function fillCalPick() {
+  const sel = $('#calPick'); sel.innerHTML = '';
+  points.forEach((p, i) => { const o = document.createElement('option'); o.value = i; o.textContent = p.name; sel.appendChild(o); });
+}
+function renderCalTable() {
+  const tb = $('#calTable tbody'); tb.innerHTML = '';
+  calPairs.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    const r = calTransform?.residuals[i];
+    tr.innerHTML = `<td>${esc(p.label)}</td><td>${r ? (r.dh * 100).toFixed(0) + 'cm' : '-'}</td><td><button class="btn" data-i="${i}" type="button">消す</button></td>`;
+    tb.appendChild(tr);
+  });
+  $$('#calTable button').forEach(b => b.addEventListener('click', () => { calPairs.splice(parseInt(b.dataset.i, 10), 1); calTransform = null; renderCalTable(); updateGeoView(); updateNav(); }));
+}
+$('#btnCalAdd').addEventListener('click', () => {
+  const idx = parseInt($('#calPick').value, 10);
+  if (!points[idx]) { msg('#calMsg', '点を選んでください', 'bad'); return; }
+  if (!curXY) { msg('#calMsg', '現在地がまだ取れていません(上の帯に X・Y が出てから)', 'bad'); return; }
+  const p = points[idx];
+  calPairs.push({ label: p.name, design: { e: p.Y, n: p.X, z: p.H }, ar: { x: curXY.Y, y: 0, z: -curXY.X } });
+  calTransform = null; renderCalTable();
+  msg('#calMsg', `${p.name} を記録しました(${calPairs.length}点)`, 'good');
+});
+$('#btnCalRun').addEventListener('click', () => {
+  try { calTransform = alignPoints(calPairs); renderCalTable(); updateGeoView(); updateNav(); msg('#calMsg', calTransform.message, calTransform.warn ? 'bad' : 'good'); }
+  catch (e) { msg('#calMsg', e.message, 'bad'); }
+});
+$('#btnCalClear').addEventListener('click', () => { calPairs = []; calTransform = null; renderCalTable(); updateGeoView(); updateNav(); msg('#calMsg', '現地合わせを消しました', ''); });
 
-/* ---------- ⑤ AR(流用元①の流れ。ここでは入口のみ・次版で本実装) ---------- */
-const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-(async () => {
-  if (isIOS) {
-    $('#btnAR').disabled = true;
-    msg('#arMsg', '📵 iPhoneではAR(カメラ表示)は使えません。地図・GPS・点までの案内は使えます(①〜④のタブはそのままお使いください)。', 'bad');
-    return;
-  }
-  const ok = navigator.xr && await navigator.xr.isSessionSupported('immersive-ar').catch(() => false);
-  if (ok) { $('#btnAR').disabled = false; msg('#arMsg', 'この端末はARに対応しています(本実装は次版。現場ARビューア.htmlのstartAR/onSelectを流用予定)。', 'good'); }
-  else msg('#arMsg', 'この端末・ブラウザはAR非対応です。', 'bad');
-})();
-$('#btnAR').addEventListener('click', () => {
-  msg('#arMsg', '試作段階のため、ARの本画面は次版で実装します(現場ARビューア.htmlを開いて先行確認できます)。', '');
+/* ---------- 地図の保存(Service Worker) ---------- */
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js')
+    .then(() => { $('#swMsg').textContent = '地図の保存: 使えます'; })
+    .catch(() => { $('#swMsg').textContent = '地図の保存: この開き方では使えません(LINE の中など)'; });
+} else $('#swMsg').textContent = '地図の保存: この開き方では使えません';
+$('#btnClearCache').addEventListener('click', async () => {
+  const keys = await caches.keys();
+  await Promise.all(keys.filter(k => k.includes('tiles')).map(k => caches.delete(k)));
+  $('#swMsg').textContent = '保存した地図を消しました';
 });
 
-renderPoints();
+/* ---------- 起動: 地図と基準点を先に出し、図面は後から読む ---------- */
+try {
+  const saved = JSON.parse(localStorage.getItem('kn.points') || '[]');
+  if (Array.isArray(saved) && saved.length) {
+    points = saved.filter(p => Number.isFinite(p.X) && Number.isFinite(p.Y));
+    const s = parseInt(localStorage.getItem('kn.sel') || '-1', 10);
+    selectedIdx = points[s] ? s : -1;
+  }
+} catch { /* 壊れた保存は無視 */ }
+drawPoints(); fitData(); updateNav();
+startGeo();
+const later = window.requestIdleCallback || (f => setTimeout(f, 300));
+later(async () => {
+  let dname = '';
+  try {
+    const d = await idbGet('dxf');
+    if (d && d.segs) { setDrawing(d, !points.length); dname = `図面 ${d.name}(線 ${(d.segs.length / 4).toLocaleString()} 本)`; }
+  } catch { /* 読めなければ図面なしで続ける */ }
+  const ptxt = points.length ? `基準点 ${points.length} 点` : '';
+  chk('chkData', 'ok', (ptxt || dname) ? [ptxt, dname].filter(Boolean).join('・') : 'まだありません。地図の下の「基準点」「図面」から読みます');
+  spState.data = true; maybeAutoClose();
+});
+} // main
 </script>
 </body>
 </html>
