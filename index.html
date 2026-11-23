@@ -74,7 +74,7 @@ button{font:inherit;color:inherit}
 .mlabel{background:#a61e4d;color:#fff;font-weight:700;font-size:12px;padding:1px 6px;border-radius:9px;white-space:nowrap;transform:translate(-50%,-50%);display:inline-block}
 .mptlabel{background:#fff;color:#a61e4d;border:1px solid #a61e4d;font-weight:700;font-size:11px;padding:0 5px;border-radius:8px;white-space:nowrap;display:inline-block;transform:translate(8px,-50%)}
 /* 図面の文字 */
-.fracdpr .leaflet-tile-container img.leaflet-tile{mix-blend-mode:plus-lighter}
+.fracdpr #map.photo .leaflet-tile-container img.leaflet-tile{mix-blend-mode:plus-lighter}
 .dtext{color:#1f2d3d;font-size:11px;font-weight:700;white-space:nowrap;transform-origin:0 100%;text-shadow:0 0 2px #fff,0 0 2px #fff;position:absolute;bottom:0;left:0;pointer-events:none}
 /* 下: ボタンの帯 */
 #bar{position:fixed;left:0;right:0;bottom:0;z-index:1000;height:calc(var(--barH) + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);
@@ -345,7 +345,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </div>
   </div>
   <button id="opSkip" type="button">とばす</button>
-  <div id="opFoot">v0.4.5 試験中 ・ 株式会社ネクサス</div>
+  <div id="opFoot">v0.4.6 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
@@ -393,7 +393,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.5 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.6 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <div class="sp-cat"><img class="catHead" src="img/cat_head.png" alt="" style="width:64px;height:64px"><span id="spCatMsg">準備しています…</span></div>
   <ul class="sp-list">
@@ -583,8 +583,8 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.4.5(2026-11-24)試験中';
-window.__knVer = 'v0.4.5';
+const VERSION = 'v0.4.6(2026-11-24)試験中';
+window.__knVer = 'v0.4.6';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -717,6 +717,7 @@ function setBase(name) {
   if (!(name in BASES)) name = 'std';
   if (BASES[name]) BASES[name].addTo(map);
   $('#map').classList.toggle('blank', name === 'blank');
+  $('#map').classList.toggle('photo', name === 'photo');
   curBase = name; localStorage.setItem('kn.base', name);
   dwgColor = name === 'photo' ? '#ffe14d' : '#2f3d4d'; // 写真の上は黄色の線で見やすく
   if (dwgInit) refreshDrawing();
@@ -742,6 +743,14 @@ const DwgCanvas = L.Layer.extend({
   },
   _anim(e) { this._tf(e.center, e.zoom); },
   _pinch() { if (this._map._animatingZoom) return; this._tf(this._map.getCenter(), this._map.getZoom()); },
+  // 画面が、前に描いた範囲の中に(端から 8% の余裕を残して)収まっているか。収まっていれば描き直さなくてよい
+  covers() {
+    const m = this._map;
+    if (!this._tl || m.getZoom() !== this._z || !m.getPixelOrigin().equals(this._po)) return false;
+    const a = m.containerPointToLayerPoint([0, 0]), sz = m.getSize(), mx = sz.x * 0.08, my = sz.y * 0.08;
+    return a.x - this._tl.x >= mx && a.y - this._tl.y >= my
+      && this._tl.x + this._w - (a.x + sz.x) >= mx && this._tl.y + this._h - (a.y + sz.y) >= my;
+  },
   begin() {
     const m = this._map, sz = m.getSize(), pad = 0.25, dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = Math.round(sz.x * (1 + 2 * pad)), h = Math.round(sz.y * (1 + 2 * pad));
@@ -749,7 +758,7 @@ const DwgCanvas = L.Layer.extend({
     const c = this._c;
     if (c.width !== w * dpr || c.height !== h * dpr) { c.width = w * dpr; c.height = h * dpr; c.style.width = `${w}px`; c.style.height = `${h}px`; }
     L.DomUtil.setPosition(c, tl);
-    this._z = m.getZoom();
+    this._z = m.getZoom(); this._tl = tl; this._w = w; this._h = h; this._po = m.getPixelOrigin();
     this._b = L.latLngBounds(m.layerPointToLatLng(tl), m.layerPointToLatLng(tl.add([w, h])));
     const ctx = c.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
@@ -1136,7 +1145,8 @@ function refreshDrawing() {
   $('#dwgMsg').className = 'msg good';
 }
 let refreshTimer = 0;
-map.on('moveend zoomend resize', () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(refreshDrawing, 60); });
+map.on('moveend zoomend', () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => { if (!dwgCanvas.covers()) refreshDrawing(); }, 60); });
+map.on('resize viewreset', () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(refreshDrawing, 60); });
 dwgInit = true;
 window.__kn.dwgEnd = (i = 0) => lastSel.length > i ? [dwgLL[4 * lastSel[i]], dwgLL[4 * lastSel[i] + 1]] : null; // 試験用(図面の線の端)
 
@@ -1329,7 +1339,14 @@ if (needsOriPermission) {
 }
 $('#btnCompass').addEventListener('click', askCompass);
 let hdRaf = 0;
-function scheduleHeading() { if (!hdRaf) hdRaf = requestAnimationFrame(() => { hdRaf = 0; renderHeading(); }); }
+let hdLast = null, hdT = 0;
+// 向きは 2 度以上変わったときだけ、80ms(1 秒に 12 回)より詰めずに描き直す
+function scheduleHeading() {
+  const h = curHeading(); if (h == null || hdRaf) return;
+  if (hdLast != null && Math.abs(((h - hdLast + 540) % 360) - 180) < 2) return;
+  hdRaf = setTimeout(() => requestAnimationFrame(() => { hdRaf = 0; hdT = performance.now(); hdLast = curHeading(); renderHeading(); }),
+    Math.max(0, 80 - (performance.now() - hdT)));
+}
 function curHeading() { return heading ?? gpsHeading; }
 function renderHeading() {
   const h = curHeading();
