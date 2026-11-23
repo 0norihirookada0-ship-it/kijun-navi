@@ -345,7 +345,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </div>
   </div>
   <button id="opSkip" type="button">とばす</button>
-  <div id="opFoot">v0.4.6 試験中 ・ 株式会社ネクサス</div>
+  <div id="opFoot">v0.4.7 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
@@ -393,7 +393,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.6 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.7 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <div class="sp-cat"><img class="catHead" src="img/cat_head.png" alt="" style="width:64px;height:64px"><span id="spCatMsg">準備しています…</span></div>
   <ul class="sp-list">
@@ -492,7 +492,12 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       <b>iPhone</b>
       <ol><li>LINE のトークでファイルを押して開く</li><li>共有のボタン(四角から上向きの矢印)→「"ファイル"に保存」→「この iPhone 内」→「保存」</li><li>ここに戻って選ぶボタン →「ブラウズ」→「この iPhone 内」から選ぶ</li></ol>
       <b>Android</b>
-      <ol><li>LINE のトークでファイルを押して「保存」(「ダウンロード」に入ります)</li><li>ここに戻って選ぶボタン →「ダウンロード」から選ぶ</li></ol>
+      <ol><li>LINE のトークでファイルを<b>長押し</b>→「保存」(「ダウンロード」に入ります)。押して出る「ビューワーを起動」で「スプレッドシート」を選ぶと、Google のスプレッドシートに変わって読めなくなります</li><li>ここに戻って選ぶボタン →「ダウンロード」から選ぶ</li></ol>
+    </details>
+    <details class="fhelp" id="pasteBox"><summary>📋 貼り付けで読む(スプレッドシート・メモから)</summary>
+      <p>スプレッドシートで点の表(点名・X・Y・H)を選んでコピーし、下の枠を長押しして「貼り付け」→「読む」。</p>
+      <textarea id="pasteTxt" rows="4" style="width:100%;font:13px monospace" placeholder="TNO.1,-166100.000,-19700.000,104.5"></textarea>
+      <div class="row"><button class="btn primary" id="btnPaste" type="button">読む</button></div>
     </details>
     <p class="note">CSV は「点名,X,Y,H」(1行目が見出しでも可)。SIMA は A01 行。どのボタンで選んでも、図面(DXF)なら図面として読みます。点を押すと、その点までの案内を始めます。LINE で届いたファイルは、先に「ファイル」(iPhone)・「ダウンロード」(Android)に保存してから選びます。</p>
     <p id="ptsMsg" class="msg"></p>
@@ -525,7 +530,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       <b>iPhone</b>
       <ol><li>LINE のトークでファイルを押して開く</li><li>共有のボタン(四角から上向きの矢印)→「"ファイル"に保存」→「この iPhone 内」→「保存」</li><li>ここに戻って選ぶボタン →「ブラウズ」→「この iPhone 内」から選ぶ</li></ol>
       <b>Android</b>
-      <ol><li>LINE のトークでファイルを押して「保存」(「ダウンロード」に入ります)</li><li>ここに戻って選ぶボタン →「ダウンロード」から選ぶ</li></ol>
+      <ol><li>LINE のトークでファイルを<b>長押し</b>→「保存」(「ダウンロード」に入ります)。押して出る「ビューワーを起動」で「スプレッドシート」を選ぶと、Google のスプレッドシートに変わって読めなくなります</li><li>ここに戻って選ぶボタン →「ダウンロード」から選ぶ</li></ol>
     </details>
     <p id="dwgMsg" class="msg"></p>
     <p class="note">線・ポリライン・円・円弧・点・設計面の三角形(3DFACE)と文字を地図に重ねます(ハッチ・ブロックは出しません)。文字は右の 🏷 が入で、拡大したときに出ます。軽くするため、見えている範囲だけを描き、縮小しているときは短い線を省きます。図面は端末に残り、次に開いたときは地図が出たあとで読み出します。</p>
@@ -583,8 +588,8 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.4.6(2026-11-24)試験中';
-window.__knVer = 'v0.4.6';
+const VERSION = 'v0.4.7(2026-11-24)試験中';
+window.__knVer = 'v0.4.7';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -808,7 +813,7 @@ function parseCsvSima(text) {
   const out = [];
   for (const line of text.replace(/\r+\n/g, '\n').split(/\n|\r/)) { // 二重の改行(\r\r\n)にも耐える
     if (!line.trim()) continue;
-    const cols = line.split(',').map(s => s.trim());
+    const cols = line.split(/,|\t/).map(s => s.trim());
     if (/^A01/.test(line) && cols.length >= 5) {
       const X = parseFloat(cols[3]), Y = parseFloat(cols[4]), H = parseFloat(cols[5] ?? '');
       if (Number.isFinite(X) && Number.isFinite(Y)) out.push({ name: cols[2] || cols[1], X, Y, H: Number.isFinite(H) ? H : 0 });
@@ -892,13 +897,28 @@ async function pickFile(f, wanted) {
 }
 // iPhone の Safari は、読む前に欄を空にすると選んだファイルが読めなくなる(2026-11-23 社長の iPhone で発生)。読み終わってから空にする
 $('#fPts').addEventListener('change', async e => { const inp = e.target; await pickFile(inp.files[0], 'pts'); inp.value = ''; });
+// スマホのファイル選びで Google のスプレッドシート(ドライブの中の表)を選ぶと、名前が「acc%3D…」になり中身を読めない
+function isCloudDoc(f, err) {
+  return /%3D|doc=encoded/i.test(f.name)
+    || !!(err && (err.name === 'NotFoundError' || /could not be found/i.test(err.message || '')));
+}
+const CLOUD_MSG = 'このファイルは Google のスプレッドシート(ドライブの中の表)になっていて、スマホからは中身を読めません。';
 async function loadPtsFile(f) {
   try {
     const list = parseCsvSima(decodeText(await readBuf(f)));
     if (!list.length) throw new Error('点が見つかりません(CSV は 点名,X,Y,H の順)');
     setPoints(list, `${f.name}: ${list.length} 点を読みました。点を押すと案内します。`);
-  } catch (err) { msg('#ptsMsg', `${f.name} を読めません: ${err.message}`, 'bad'); }
+  } catch (err) {
+    if (isCloudDoc(f, err)) { msg('#ptsMsg', CLOUD_MSG + '下の「📋 貼り付けで読む」で表をコピーして貼り付けるか、LINE のファイルを長押し→「保存」してから「ダウンロード」で選んでください。', 'bad'); $('#pasteBox').open = true; }
+    else msg('#ptsMsg', `${f.name} を読めません: ${err.message}`, 'bad');
+  }
 }
+$('#btnPaste').addEventListener('click', () => {
+  const list = parseCsvSima($('#pasteTxt').value);
+  if (!list.length) { msg('#ptsMsg', '点が見つかりません。点名・X・Y・H の 4 列をコピーして貼り付けてください。', 'bad'); return; }
+  setPoints(list, `貼り付けから ${list.length} 点を読みました。点を押すと案内します。`);
+  $('#pasteTxt').value = ''; $('#pasteBox').open = false;
+});
 $('#btnDemo').addEventListener('click', () => {
   // 実在の現場座標は使わない、動作確認用のダミー(架空の4点)
   setPoints([
@@ -1180,7 +1200,10 @@ async function loadDxfFile(f) {
     dwgShow = true; localStorage.setItem('kn.dwgShow', '1'); $('#btnDwgShow').classList.add('on'); $('#btnDwgShow').textContent = '表示中';
     idbPut('dxf', d).catch(() => {});
     console.info(`DXF ${f.name}: ${(performance.now() - t0).toFixed(0)}ms`);
-  } catch (err) { msg('#dwgMsg', `${f.name} を読めません: ${err.message}`, 'bad'); }
+  } catch (err) {
+    if (isCloudDoc(f, err)) msg('#dwgMsg', CLOUD_MSG + 'LINE のファイルを長押し→「保存」してから、「ダウンロード」で選んでください。', 'bad');
+    else msg('#dwgMsg', `${f.name} を読めません: ${err.message}`, 'bad');
+  }
 }
 $('#btnDwgShow').addEventListener('click', () => {
   dwgShow = !dwgShow; localStorage.setItem('kn.dwgShow', dwgShow ? '1' : '0');
