@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <title>ECP基準点ナビ(試作)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -57,11 +58,46 @@ button.big[aria-current=true]{background:var(--navy);color:#fff;border-color:var
 .err.rough{background:#f3d9b1;color:#6b3d00}
 .err.cal{background:#cfe9d7;color:#0f5132}
 .err.rtk{background:#cfe0f5;color:#0b3d6b}
+/* 全画面共通: LINEの中で開いた警告・常時座標バー(2026-11-23) */
+.banner{margin:0 16px 10px;padding:10px 12px;border-radius:8px;font-size:13px;line-height:1.5}
+.banner.bad{background:#fdeceb;border:1px solid var(--warn);color:#7a1f18}
+.banner b{display:block;margin-bottom:2px;font-size:14px}
+.banner p{margin:0}
+.banner a,.banner span.lnk{color:var(--navy);font-weight:700;text-decoration:underline}
+#geoBar{margin:0 16px 10px;padding:8px 12px;border-radius:8px;background:var(--navy);color:#fff}
+.geobar-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
+.geobar-row.small{font-size:11.5px;opacity:.88;margin-top:2px}
+.geobar-zone{font-size:12px;padding:2px 8px;border:1px solid rgba(255,255,255,.5);border-radius:10px}
+.geobar-xy b{font-size:22px;font-variant-numeric:tabular-nums}
+.geobar-xy small{font-size:11px;opacity:.85;margin-right:6px}
+#geoErr{margin:4px 0 0;font-size:12.5px;color:#ffd9a3}
+#geoErr.bad{color:#ffb3a8}
+/* 地図画面の下部ボタン帯・カメラボタン・現在地マーカー */
+.basebar{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.basebar button{padding:8px 4px;font-size:12.5px}
+.curArrow{font-size:22px;line-height:28px;text-align:center;width:28px;height:28px;display:block;filter:drop-shadow(0 0 2px #fff)}
+.ptTri{width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:16px solid #e8a300;filter:drop-shadow(0 0 1px #fff)}
+.leaflet-tooltip.ptlabel{font-weight:700;background:rgba(0,0,0,.72);color:#fff;border:0;padding:1px 6px;font-size:12px}
 </style>
 </head>
 <body>
 
 <header><h1>ECP基準点ナビ</h1><span class="tag">試作 v0.1・社内実証前</span></header>
+<div id="lineWarn" class="banner bad" hidden>
+  <b>⚠ LINEの中で開いています</b>
+  <p>LINEのアプリ内ブラウザでは地図・位置情報が正しく動かないことがあります。画面右上の「…」(iPhone)または「⋮」(Android)から<span class="lnk" id="lineOpenHelp">「他のアプリで開く」「Safariで開く」「Chromeで開く」</span>を選んでください。</p>
+</div>
+<div id="geoBar">
+  <div class="geobar-row">
+    <span class="geobar-zone" id="geoZone">第6系</span>
+    <span class="geobar-xy"><small>X(北)</small><b id="geoX">---</b> <small>Y(東)</small><b id="geoY">---</b></span>
+  </div>
+  <div class="geobar-row small">
+    <span id="geoBLH">B:--- L:--- H:---</span>
+    <span id="geoAcc">精度 ±---m</span>
+  </div>
+  <p id="geoErr" class="msg" hidden></p>
+</div>
 <nav>
   <button data-tab="open" aria-current="true">① ひらく</button>
   <button data-tab="map">② 一覧・地図</button>
@@ -100,13 +136,20 @@ button.big[aria-current=true]{background:var(--navy);color:#fff;border-color:var
   </section>
   <section>
     <h2>地図</h2>
+    <div class="basebar">
+      <button class="big" id="btnBaseStd" type="button" aria-current="true">🗺️ 地理院</button>
+      <button class="big" id="btnBasePale" type="button">📄 淡色</button>
+      <button class="big" id="btnBaseAir" type="button">🛰️ 写真</button>
+      <button class="big" id="btnBaseBlank" type="button">⬜ 白図</button>
+    </div>
     <div class="row">
-      <button class="big" id="btnBaseStd" type="button" aria-current="true">🗺️ 地図</button>
-      <button class="big" id="btnBaseAir" type="button">🛰️ 航空写真</button>
-      <button class="big" id="btnMapHere" type="button">📍 現在地へ</button>
+      <label class="filebtn">📐 図面<input id="fDxf2" type="file" accept=".dxf"></label>
+      <label class="filebtn">📍 基準点<input id="fPts2" type="file" accept=".csv,.sim,.txt"></label>
+      <button class="big" id="btnMapHere" type="button">📍 現在地に戻る</button>
+      <button class="big" id="btnCamera" type="button">📷 カメラ</button>
     </div>
     <div id="leafletMap"></div>
-    <p class="note">現在地(青丸)と選んだ点(オレンジ)。GPSの許可が必要です。背景地図・航空写真は国土地理院の地理院タイルを使用。</p>
+    <p class="note">現在地(矢印。向いている方向を指す)と基準点(オレンジの三角+点名)。背景地図・写真は国土地理院の地理院タイルを使用。</p>
     <p id="tileMsg" class="note"></p>
   </section>
 </main>
@@ -159,14 +202,24 @@ button.big[aria-current=true]{background:var(--navy);color:#fff;border-color:var
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
+/* ---------- LINEのアプリ内ブラウザを検出(①の原因調査。2026-11-23) ----------
+   LINEの中で開くと、位置情報・Service Worker・地図タイルの一部が不安定になることがある。
+   UAに「Line/」が含まれる場合に警告を出し、外部ブラウザで開くよう案内する。 */
+const isLineApp = /\bLine\//.test(navigator.userAgent);
+if (isLineApp) $('#lineWarn').hidden = false;
+
 /* ---------- タブ切替 ---------- */
-$$('nav button').forEach(b => b.addEventListener('click', () => {
+function switchTab(name) {
+  const btn = $(`nav button[data-tab="${name}"]`);
+  if (!btn) return;
   $$('nav button').forEach(x => x.removeAttribute('aria-current'));
-  b.setAttribute('aria-current', 'true');
-  $$('main').forEach(m => m.classList.toggle('on', m.dataset.tab === b.dataset.tab));
-  if (b.dataset.tab === 'map') drawMap();
-  if (b.dataset.tab === 'cal') fillCalPick();
-}));
+  btn.setAttribute('aria-current', 'true');
+  $$('main').forEach(m => m.classList.toggle('on', m.dataset.tab === name));
+  if (name === 'map') drawMap();
+  if (name === 'cal') fillCalPick();
+}
+$$('nav button').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+$('#btnCamera')?.addEventListener('click', () => switchTab('ar'));
 
 /* ---------- 平面直角座標系(GSIの原点。既定 第Ⅵ系) ----------
    順に I系〜XIX系。原点緯度・経度(度)。出典: 国土地理院 公共測量 作業規程の準則 別表 */
@@ -289,16 +342,18 @@ function renderPoints() {
   }));
 }
 
-$('#fPts').addEventListener('change', async e => {
-  const f = e.target.files[0]; if (!f) return;
+async function loadPtsFile(f) {
+  if (!f) return;
   try {
     points = parseCsvSima(await f.text(), f.name);
     if (!points.length) throw new Error('点が見つかりません');
     msg('#loadMsg', `${f.name}: ${points.length} 点を読み込みました。`, 'good');
     renderPoints();
+    if ($('main[data-tab="map"]').classList.contains('on')) drawMap();
   } catch (err) { msg('#loadMsg', `読込できません: ${err.message}`, 'bad'); }
-  e.target.value = '';
-});
+}
+$('#fPts').addEventListener('change', e => { loadPtsFile(e.target.files[0]); e.target.value = ''; });
+$('#fPts2')?.addEventListener('change', e => { loadPtsFile(e.target.files[0]); e.target.value = ''; });
 $('#btnDemo').addEventListener('click', () => {
   // 実在の現場座標は使わない、動作確認用のダミー数値(架空の4点)
   points = [
@@ -387,53 +442,78 @@ function parseDxf(text) {
   }
   return { lines: lines.filter(l => Number.isFinite(l[0].x) && Number.isFinite(l[0].y) && Number.isFinite(l[1].x) && Number.isFinite(l[1].y)), points };
 }
-$('#fDxf').addEventListener('change', async e => {
-  const f = e.target.files[0]; if (!f) return;
+async function loadDxfFile(f) {
+  if (!f) return;
   if (f.size > 15 * 1024 * 1024) msg('#dxfMsg', `${f.name}: ${(f.size / 1024 / 1024).toFixed(1)}MBと大きいため、読み込みに時間がかかることがあります…`, '');
   try {
     const geom = parseDxf(await f.text());
     if (!geom.lines.length && !geom.points.length) throw new Error('対応する図形(LINE/LWPOLYLINE/POLYLINE/POINT/CIRCLE)が見つかりません');
     dxfGeom = geom;
     msg('#dxfMsg', `${f.name}: 線 ${geom.lines.length}本・点 ${geom.points.length}個を読み込みました。`, 'good');
-    drawMap();
+    if ($('main[data-tab="map"]').classList.contains('on')) drawMap();
   } catch (err) { msg('#dxfMsg', `読込できません: ${err.message}`, 'bad'); }
-  e.target.value = '';
-});
+}
+$('#fDxf').addEventListener('change', e => { loadDxfFile(e.target.files[0]); e.target.value = ''; });
+$('#fDxf2')?.addEventListener('change', e => { loadDxfFile(e.target.files[0]); e.target.value = ''; });
 
-/* ---------- 地図(平面図、簡易キャンバス) ---------- */
-/* ---------- 地図(国土地理院タイル。標準地図⇔航空写真の切替、図面・基準点を重ねる) ---------- */
+/* ---------- 地図(国土地理院タイル。地理院地図・淡色・写真・白図の切替、図面・基準点を重ねる) ----------
+   軽くする工夫(2026-11-23、社長の「重い」報告への対応):
+   ・preferCanvas でSVGでなくcanvas描画にする
+   ・位置を取るたびに全部を描き直さず、現在地マーカーだけ動かす(drawMapは図面・基準点を読んだ時とタブを開いた時だけ)
+   ・地図・航空写真はもとからタイル単位の読み込み(Leaflet標準) */
 const GSI_ATTR = '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>';
-let leafletMap = null, baseStd = null, baseAir = null, overlayGroup = null, curMarker = null;
+let leafletMap = null, baseLayers = null, overlayGroup = null, curMarker = null;
+const BASE_IDS = { std: 'btnBaseStd', pale: 'btnBasePale', air: 'btnBaseAir', blank: 'btnBaseBlank' };
 function ensureMap() {
   if (leafletMap) return;
-  leafletMap = L.map('leafletMap', { attributionControl: true }).setView([34.685, 135.805], 15); // 既定: 奈良県庁付近
-  baseStd = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', { attribution: GSI_ATTR, maxZoom: 18 });
-  baseAir = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', { attribution: GSI_ATTR, maxZoom: 18 });
-  baseStd.addTo(leafletMap);
+  leafletMap = L.map('leafletMap', { attributionControl: true, preferCanvas: true }).setView([34.685, 135.805], 15); // 既定: 奈良県庁付近
+  baseLayers = {
+    std: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', { attribution: GSI_ATTR, maxZoom: 18 }),
+    pale: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', { attribution: GSI_ATTR, maxZoom: 18 }),
+    air: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg', { attribution: GSI_ATTR, maxZoom: 18 }),
+    blank: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/blank/{z}/{x}/{y}.png', { attribution: GSI_ATTR, maxZoom: 18 }),
+  };
+  baseLayers.std.addTo(leafletMap);
   overlayGroup = L.layerGroup().addTo(leafletMap);
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-      .then(() => msg('#tileMsg', '電波の弱い所でも、一度表示した範囲の地図・写真は端末に残ります。', ''))
-      .catch(() => msg('#tileMsg', 'オフライン保存はこの端末・この開き方では使えません(file://表示中など)。', ''));
-  }
+  registerSW();
+  updateCurMarker();
 }
-$('#btnBaseStd').addEventListener('click', () => {
+function setBase(key) {
   ensureMap();
-  leafletMap.removeLayer(baseAir); baseStd.addTo(leafletMap);
-  $('#btnBaseStd').setAttribute('aria-current', 'true'); $('#btnBaseAir').removeAttribute('aria-current');
-});
-$('#btnBaseAir').addEventListener('click', () => {
+  for (const k in baseLayers) { leafletMap.removeLayer(baseLayers[k]); $('#' + BASE_IDS[k])?.removeAttribute('aria-current'); }
+  baseLayers[key].addTo(leafletMap);
+  $('#' + BASE_IDS[key])?.setAttribute('aria-current', 'true');
+}
+$('#btnBaseStd').addEventListener('click', () => setBase('std'));
+$('#btnBasePale').addEventListener('click', () => setBase('pale'));
+$('#btnBaseAir').addEventListener('click', () => setBase('air'));
+$('#btnBaseBlank').addEventListener('click', () => setBase('blank'));
+$('#btnMapHere').addEventListener('click', async () => {
   ensureMap();
-  leafletMap.removeLayer(baseStd); baseAir.addTo(leafletMap);
-  $('#btnBaseAir').setAttribute('aria-current', 'true'); $('#btnBaseStd').removeAttribute('aria-current');
+  await requestMotionPermission();
+  startWatch();
+  if (curLatLon) leafletMap.setView([curLatLon.latitude, curLatLon.longitude], 18);
 });
-$('#btnMapHere').addEventListener('click', () => {
-  ensureMap();
-  startWatch((xy, err) => {
-    if (err) { msg('#tileMsg', `位置情報エラー: ${err}`, 'bad'); return; }
-    leafletMap.setView([curLatLon.latitude, curLatLon.longitude], 18);
-  });
-});
+function registerSW() {
+  if (!('serviceWorker' in navigator)) { msg('#tileMsg', 'オフライン保存はこの端末・この開き方では使えません(file://表示中など)。', ''); return; }
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+    .then(reg => { msg('#tileMsg', '電波の弱い所でも、一度表示した範囲の地図・写真は端末に残ります。', ''); reg.update().catch(() => {}); })
+    .catch(() => msg('#tileMsg', 'オフライン保存はこの端末・この開き方では使えません。', ''));
+}
+function updateCurMarker() {
+  if (!leafletMap || !curLatLon) return;
+  const latlng = [curLatLon.latitude, curLatLon.longitude];
+  if (!curMarker) {
+    curMarker = L.marker(latlng, {
+      icon: L.divIcon({ className: '', html: '<div class="curArrow" id="curArrowEl">⬆</div>', iconSize: [28, 28], iconAnchor: [14, 14] }),
+      zIndexOffset: 1000,
+    }).addTo(leafletMap);
+  } else {
+    curMarker.setLatLng(latlng);
+  }
+  const el = document.getElementById('curArrowEl');
+  if (el) el.style.transform = `rotate(${heading}deg)`;
+}
 function drawMap() {
   ensureMap();
   setTimeout(() => leafletMap.invalidateSize(), 50); // タブが隠れていた間のサイズずれを直す
@@ -453,29 +533,73 @@ function drawMap() {
   points.forEach((p, i) => {
     const ll = xy2latlon(p.X, p.Y, zoneNo);
     const sel = i === selectedIdx;
-    L.circleMarker([ll.lat, ll.lon], { radius: sel ? 9 : 6, color: sel ? '#e8a300' : '#17324e', fillColor: sel ? '#e8a300' : '#17324e', fillOpacity: 1 })
-      .bindTooltip(p.name, { permanent: true, direction: 'right', className: 'navy' }).addTo(overlayGroup);
+    const icon = L.divIcon({ className: '', html: `<div class="ptTri"${sel ? ' style="filter:drop-shadow(0 0 3px #17324e) brightness(1.2)"' : ''}></div>`, iconSize: [18, 16], iconAnchor: [9, 14] });
+    L.marker([ll.lat, ll.lon], { icon }).bindTooltip(p.name, { permanent: true, direction: 'right', className: 'ptlabel' }).addTo(overlayGroup);
     latlngs.push([ll.lat, ll.lon]);
   });
-  if (curMarker) { overlayGroup.removeLayer(curMarker); curMarker = null; }
-  if (curLatLon) {
-    curMarker = L.circleMarker([curLatLon.latitude, curLatLon.longitude], { radius: 7, color: '#1565c0', fillColor: '#1565c0', fillOpacity: 1 }).addTo(overlayGroup);
+  // 現在地が図面・基準点から大きく離れている(座標系の取り違え・試しデータなど)ときは、
+  // 両方を無理に収めようとして地図が極端に広がり、重く見えるのを防ぐ(図面側を優先)
+  if (curLatLon && latlngs.length) {
+    const b = L.latLngBounds(latlngs);
+    if (b.getCenter().distanceTo([curLatLon.latitude, curLatLon.longitude]) < 20000) {
+      latlngs.push([curLatLon.latitude, curLatLon.longitude]);
+    }
+  } else if (curLatLon) {
     latlngs.push([curLatLon.latitude, curLatLon.longitude]);
   }
   if (latlngs.length) leafletMap.fitBounds(latlngs, { padding: [30, 30], maxZoom: 19 });
+  updateCurMarker();
 }
 
-/* ---------- GPS 現在地 ---------- */
-let curLatLon = null, curXY = null, watchId = null;
-function startWatch(cb) {
-  if (!navigator.geolocation) { cb(null, 'このブラウザは位置情報に対応していません'); return; }
-  watchId = navigator.geolocation.watchPosition(pos => {
+/* ---------- GPS 現在地(ページを開いたら自動で追跡を始め、常時バーと地図の矢印を更新する。
+   watchPositionは1つだけ(前は現在地ボタン・ナビ開始のたびに増えていき、これも「重い」原因の一つだった)。2026-11-23 ---------- */
+let curLatLon = null, curXY = null, geoWatchId = null, heading = 0;
+const posListeners = new Set(); // 位置が更新されるたびに呼ぶ処理(③ナビなど)を登録する
+function startWatch() {
+  if (geoWatchId != null) return; // 二重に始めない
+  if (!navigator.geolocation) { geoError('この端末・ブラウザは位置情報に対応していません。'); return; }
+  geoWatchId = navigator.geolocation.watchPosition(pos => {
     curLatLon = pos.coords;
     curXY = latlon2xy(pos.coords.latitude, pos.coords.longitude, parseInt(zoneSel.value, 10));
     curXY.accuracy = pos.coords.accuracy;
-    cb(curXY, null);
-  }, err => cb(null, err.message), { enableHighAccuracy: true, maximumAge: 1000 });
+    geoOk();
+    updateGeoBar();
+    updateCurMarker();
+    for (const fn of posListeners) fn(curXY);
+  }, err => geoError(geoErrText(err)), { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
 }
+function geoErrText(err) {
+  if (err.code === 1) return '位置情報の利用が許可されていません。ブラウザの設定(アドレスバー左の鍵アイコン→サイトの設定、またはOSの設定→プライバシー→位置情報)でこのサイトの位置情報を許可してください。';
+  if (err.code === 2) return '位置情報を取得できません。屋外や窓際など電波の良い所でお試しください。';
+  if (err.code === 3) return '位置情報の取得に時間がかかっています。少し待つか、電波の良い場所でお試しください。';
+  return err.message || '位置情報エラー';
+}
+function geoError(text) { const el = $('#geoErr'); el.textContent = '⚠ ' + text; el.hidden = false; el.className = 'msg bad'; }
+function geoOk() { $('#geoErr').hidden = true; }
+function updateGeoBar() {
+  if (!curXY || !curLatLon) return;
+  $('#geoZone').textContent = `第${zoneSel.value}系`;
+  $('#geoX').textContent = curXY.X.toFixed(3);
+  $('#geoY').textContent = curXY.Y.toFixed(3);
+  const h = curLatLon.altitude != null ? curLatLon.altitude.toFixed(1) + 'm' : '---';
+  $('#geoBLH').textContent = `B:${curLatLon.latitude.toFixed(6)}° L:${curLatLon.longitude.toFixed(6)}° H:${h}`;
+  $('#geoAcc').textContent = `精度 ±${Math.round(curLatLon.accuracy || 0)}m`;
+}
+async function requestMotionPermission() {
+  // iOS 13+はジェスチャー(ボタン押下)の中で許可を求めないと向きが取れない
+  try {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      await DeviceOrientationEvent.requestPermission();
+    }
+  } catch { /* 許可されなくても地図・位置自体は使えるので続行 */ }
+}
+function onOrientation(e) {
+  const h2 = e.webkitCompassHeading ?? (e.alpha != null ? (360 - e.alpha) : null);
+  if (h2 != null) { heading = h2; updateCurMarker(); }
+}
+window.addEventListener('deviceorientationabsolute', onOrientation);
+window.addEventListener('deviceorientation', onOrientation);
+startWatch(); // ページを開いたら自動で位置を取り始める(常時バーに出すため)
 
 /* ---------- ③ ナビ(距離・方位) ---------- */
 function bearingDeg(from, to) {
@@ -484,34 +608,29 @@ function bearingDeg(from, to) {
   let az = Math.atan2(dY, dX) * 180 / Math.PI;
   return (az + 360) % 360;
 }
-$('#btnGoStart').addEventListener('click', () => {
+function updateGoDisplay() {
+  if (selectedIdx < 0 || !curXY) return;
+  const applied = calTransform ? calApply(curXY) : curXY;
+  const target = points[selectedIdx];
+  const dist = Math.hypot(target.X - applied.X, target.Y - applied.Y);
+  const az = bearingDeg(applied, target);
+  $('#goArrow').style.transform = `rotate(${(az - heading + 360) % 360}deg)`;
+  $('#goDist').textContent = `${dist.toFixed(1)} m`;
+  const errEl = $('#goErr');
+  if (calTransform) {
+    errEl.innerHTML = `<span class="err cal">現地合わせ後・見込み誤差 ${(calTransform.maxDh * 100).toFixed(0)}cm</span>`;
+  } else {
+    errEl.innerHTML = `<span class="err rough">GPS単体・見込み誤差 約${Math.round(curXY.accuracy || 10)}m(④現地合わせで精度向上)</span>`;
+  }
+  msg('#goMsg', '現在地を取得中…(移動すると更新されます)', 'good');
+}
+posListeners.add(updateGoDisplay);
+$('#btnGoStart').addEventListener('click', async () => {
   if (selectedIdx < 0) { msg('#goMsg', '②一覧・地図で目的の点を選んでください', 'bad'); return; }
   msg('#goMsg', '現在地を取得しています…', '');
-  startWatch((xy, err) => {
-    if (err) { msg('#goMsg', `位置情報エラー: ${err}`, 'bad'); return; }
-    const applied = calTransform ? calApply(xy) : xy;
-    const target = points[selectedIdx];
-    const dist = Math.hypot(target.X - applied.X, target.Y - applied.Y);
-    const az = bearingDeg(applied, target);
-    let heading = 0;
-    window.removeEventListener('deviceorientationabsolute', onOri);
-    window.removeEventListener('deviceorientation', onOri);
-    function onOri(e) { heading = e.webkitCompassHeading ?? (360 - (e.alpha ?? 0)); updateArrow(); }
-    window.addEventListener('deviceorientationabsolute', onOri);
-    window.addEventListener('deviceorientation', onOri);
-    function updateArrow() {
-      $('#goArrow').style.transform = `rotate(${(az - heading + 360) % 360}deg)`;
-    }
-    updateArrow();
-    $('#goDist').textContent = `${dist.toFixed(1)} m`;
-    const errEl = $('#goErr');
-    if (calTransform) {
-      errEl.innerHTML = `<span class="err cal">現地合わせ後・見込み誤差 ${(calTransform.maxDh * 100).toFixed(0)}cm</span>`;
-    } else {
-      errEl.innerHTML = `<span class="err rough">GPS単体・見込み誤差 約${Math.round(xy.accuracy || 10)}m(④現地合わせで精度向上)</span>`;
-    }
-    msg('#goMsg', '現在地を取得中…(移動すると更新されます)', 'good');
-  });
+  await requestMotionPermission();
+  startWatch();
+  updateGoDisplay();
 });
 
 /* ============================================================
