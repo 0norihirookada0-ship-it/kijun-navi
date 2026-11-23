@@ -345,7 +345,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </div>
   </div>
   <button id="opSkip" type="button">とばす</button>
-  <div id="opFoot">v0.4.8 試験中 ・ 株式会社ネクサス</div>
+  <div id="opFoot">v0.4.9 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
@@ -393,7 +393,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.8 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.9 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <div class="sp-cat"><img class="catHead" src="img/cat_head.png" alt="" style="width:64px;height:64px"><span id="spCatMsg">準備しています…</span></div>
   <ul class="sp-list">
@@ -503,6 +503,12 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     </details>
     <p class="note">CSV は「点名,X,Y,H」(1行目が見出しでも可)。SIMA は A01 行。どのボタンで選んでも、図面(DXF)なら図面として読みます。点を押すと、その点までの案内を始めます。LINE で届いたファイルは、先に「ファイル」(iPhone)・「ダウンロード」(Android)に保存してから選びます。</p>
     <p id="ptsMsg" class="msg"></p>
+    <div id="linkBox" class="fhelp" hidden>
+      <b>🔗 作業員に送るリンク</b>
+      <p>このリンクを LINE に貼って送ると、作業員は押すだけで同じ基準点が入ります(ファイルの保存は要りません)。</p>
+      <div class="row"><input id="linkName" type="text" placeholder="現場名(例: メーカーズ4期)" style="flex:1;min-width:10em;font-size:16px;padding:8px"><button class="btn primary" id="btnLink" type="button">リンクを作ってコピー</button></div>
+      <input id="linkOut" type="text" readonly style="width:100%;font-size:12px;margin-top:6px" hidden>
+    </div>
     <table id="ptTable"><thead><tr><th>点名</th><th>X(北)</th><th>Y(東)</th><th>H</th></tr></thead><tbody></tbody></table>
     <h3>座標系</h3>
     <div class="row"><select id="zone"></select><span class="note">既定は第6系(奈良・京都・大阪・和歌山・三重・滋賀・福井)</span></div>
@@ -590,8 +596,8 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.4.8(2026-11-24)試験中';
-window.__knVer = 'v0.4.8';
+const VERSION = 'v0.4.9(2026-11-24)試験中';
+window.__knVer = 'v0.4.9';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -839,6 +845,7 @@ function setPoints(list, note) {
 }
 function renderPoints() {
   const tb = $('#ptTable tbody'); tb.innerHTML = '';
+  $('#linkBox').hidden = !points.length;
   points.forEach((p, i) => {
     const tr = document.createElement('tr');
     tr.className = 'pt' + (i === selectedIdx ? ' sel' : '');
@@ -1679,6 +1686,53 @@ $('#btnClearCache').addEventListener('click', async () => {
   $('#swMsg').textContent = '保存した地図を消しました';
 });
 
+/* ---------- リンクで基準点を渡す ----------
+   #z=6&g=現場名&p=… の p は「点名,X,Y,H」の行を deflate で縮めて base64url にしたもの。# の後ろはサーバーに送られない */
+function b64u(bytes) { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function unb64u(t) { const s = atob(t.replace(/-/g, '+').replace(/_/g, '/')); const a = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+async function packPoints(list) {
+  const txt = list.map(p => [p.name, +p.X.toFixed(3), +p.Y.toFixed(3), +p.H.toFixed(3)].join(',')).join('\n');
+  const raw = new TextEncoder().encode(txt);
+  if (window.CompressionStream) {
+    const buf = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+    return 'd' + b64u(buf);
+  }
+  return 't' + b64u(raw);
+}
+async function unpackPoints(code) {
+  let bytes = unb64u(code.slice(1));
+  if (code[0] === 'd') {
+    if (!window.DecompressionStream) throw new Error('この機種のブラウザが古く、リンクの点を開けません。Chrome・Safari を新しくしてください');
+    bytes = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+  }
+  return parseCsvSima(new TextDecoder().decode(bytes));
+}
+$('#btnLink').addEventListener('click', async () => {
+  const name = $('#linkName').value.trim();
+  const h = new URLSearchParams(); h.set('z', String(zoneNo())); if (name) h.set('g', name); h.set('p', await packPoints(points));
+  const url = location.origin + location.pathname + '?openExternalBrowser=1#' + h.toString();
+  if (url.length > 4900) { msg('#ptsMsg', `点が ${points.length} 点と多く、リンクが長すぎて LINE の 1 通(5,000 字)に入りません。基準点だけのファイル(200 点ほどまで)で作り直してください。`, 'bad'); return; }
+  const out = $('#linkOut'); out.hidden = false; out.value = url;
+  let ok = false; try { await navigator.clipboard.writeText(url); ok = true; } catch { out.select(); try { ok = document.execCommand('copy'); } catch {} }
+  msg('#ptsMsg', ok ? `リンクをコピーしました(${points.length} 点)。LINE のトークに貼り付けて送ってください。` : '下のリンクを長押しで全部選んでコピーし、LINE に貼り付けてください。', 'good');
+});
+async function loadFromLink() {
+  if (!/(^|[#&])p=/.test(location.hash)) return false;
+  const h = new URLSearchParams(location.hash.slice(1));
+  history.replaceState(null, '', location.pathname); // 読み直しで二重に入れない
+  try {
+    const list = await unpackPoints(h.get('p') || '');
+    if (!list.length) throw new Error('点が入っていません');
+    const z = parseInt(h.get('z') || '', 10);
+    if (z >= 1 && z <= 19 && z !== zoneNo()) { zoneSel.value = z; zoneSel.dispatchEvent(new Event('change')); }
+    const g = h.get('g') || '';
+    if (g) { localStorage.setItem('kn.genba', g); $('#linkName').value = g; }
+    setPoints(list, `${g ? g + ' の' : 'リンクの'}基準点 ${list.length} 点を読みました。地図の三角を押すと案内します。`);
+    return true;
+  } catch (err) { msg('#ptsMsg', 'リンクの基準点を読めません: ' + err.message, 'bad'); showSheet('pts'); return false; }
+}
+if (localStorage.getItem('kn.genba')) $('#linkName').value = localStorage.getItem('kn.genba');
+
 /* ---------- 起動: 地図と基準点を先に出し、図面は後から読む ---------- */
 try {
   const saved = JSON.parse(localStorage.getItem('kn.points') || '[]');
@@ -1689,6 +1743,7 @@ try {
   }
 } catch { /* 壊れた保存は無視 */ }
 drawPoints(); fitData(); updateNav();
+loadFromLink();
 startGeo();
 const later = window.requestIdleCallback || (f => setTimeout(f, 300));
 later(async () => {
