@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#17324e">
 <title>ECP基準点ナビ</title>
 <!-- 地図の部品(Leaflet 1.9.4)はアプリと一緒に置く。外のサイトに頼らないので、LINE の中・電波の弱い所でも開く -->
+<link rel="icon" type="image/png" href="img/cat_head.png">
+<link rel="apple-touch-icon" href="img/icon180.png">
+<meta name="apple-mobile-web-app-title" content="基準点ナビ">
 <link rel="stylesheet" href="lib/leaflet.css">
 <script src="lib/leaflet.js"></script>
 <style>
@@ -127,7 +130,10 @@ tr.pt{cursor:pointer}
 #opVBubble span{display:inline-block;background:#fff;color:#17324e;font-size:21px;font-weight:900;padding:8px 16px;border-radius:18px;box-shadow:0 3px 10px rgba(0,0,0,.3);white-space:nowrap}
 #opSound{position:absolute;left:12px;top:calc(env(safe-area-inset-top,0px) + 12px);border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.35);color:#fff;border-radius:16px;padding:6px 12px;font:inherit;font-size:13px;font-weight:700;z-index:3;display:none}
 #opening.vid #opSound{display:block}
-#opSkip{position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.25);color:#fff;border-radius:16px;padding:6px 12px;font-size:13px;font-weight:700;z-index:2}
+#opTapSound{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);background:rgba(0,0,0,.6);color:#fff;border-radius:22px;padding:10px 18px;font-size:18px;font-weight:800;z-index:3;display:none;pointer-events:none;animation:opPulse 1.2s ease-in-out infinite alternate}
+#opening.vid.needtap #opTapSound{display:block}
+@keyframes opPulse{from{opacity:.75}to{opacity:1}}
+#opSkip{font:inherit;cursor:pointer;position:absolute;right:12px;top:calc(env(safe-area-inset-top,0px) + 12px);border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.25);color:#fff;border-radius:16px;padding:6px 12px;font-size:13px;font-weight:700;z-index:2}
 #opFoot{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);text-align:center;font-size:12px;opacity:.85;z-index:2}
 /* 2 回目からは短く: 木が倒れる所から最後まで */
 .k-walk{animation:kWalk 7s ease-in-out infinite}
@@ -188,6 +194,21 @@ tr.pt{cursor:pointer}
 .sp-go{border:0;border-radius:10px;background:var(--accent);color:#1d1500;font-weight:800;font-size:16px;padding:14px;cursor:pointer}
 .sp-go.sub{background:#fff;border:1px solid var(--line);color:var(--ink);font-weight:700;text-align:center;text-decoration:none;font-size:14px;padding:10px}
 a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
+/* 黒猫 */
+.catHead{width:56px;height:56px;flex:none;object-fit:contain}
+.catSm{width:28px;height:28px;vertical-align:middle;object-fit:contain;margin-right:4px}
+.sp-cat{display:flex;align-items:center;gap:8px;max-width:520px;margin:14px auto 0}
+.sp-cat span{position:relative;background:#fff;border:2px solid #17324e;border-radius:14px;padding:6px 12px;font-weight:800;font-size:14px;color:#17324e}
+.sp-cat span::before{content:"";position:absolute;left:-9px;top:50%;margin-top:-6px;border:6px solid transparent;border-right-color:#17324e}
+#emptyCard{position:fixed;left:8px;right:8px;z-index:1000;bottom:calc(var(--barH) + env(safe-area-inset-bottom,0px) + 10px);margin-right:64px;
+  background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.25);padding:8px 10px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;color:#17324e}
+#emptyCard button{margin-left:auto;flex:none;border:0;border-radius:8px;background:var(--accent);color:#1d1500;font-weight:800;padding:8px 12px}
+#navCard .catArrive{display:none;width:52px;height:52px}
+#navCard.arrived #nArrow{display:none}
+#navCard.arrived .catArrive{display:block;animation:catHop .6s ease-in-out infinite alternate}
+@keyframes catHop{from{transform:translateY(0)}to{transform:translateY(-6px)}}
+#navCard.arrived #nDist{color:var(--ok)}
+@media (prefers-reduced-motion:reduce){#navCard.arrived .catArrive{animation:none}}
 /* カメラ */
 #cam{position:fixed;inset:0;z-index:1200;background:#000}
 #cam video{width:100%;height:100%;object-fit:cover}
@@ -204,11 +225,12 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
      いつも 7 秒の全部。押すと飛ばす(2026-11-23 社長「短縮はタップした時だけ」)。JS の読み込みに関わらず下がる -->
 <div id="opening" class="vid" role="button" tabindex="0" aria-label="起動画面。押すと飛ばします">
   <!-- 動画: Gemini(Veo)で、社の黒猫(フォレスト総建のヘルメット)の画像から作った 10 秒(2026-11-23 社長「生成AIを駆使せよ」)。音なしで自動再生 -->
-  <video id="opVid" src="img/opening.mp4" poster="img/opening_poster.jpg" muted playsinline autoplay preload="auto"></video>
+  <video id="opVid" src="img/opening.mp4" poster="img/opening_poster.jpg" playsinline preload="auto"></video>
+  <div id="opTapSound">🔊 タップで音が出ます</div>
   <div id="opTop"></div>
   <div id="opVTitle"><b>ECP基準点ナビ</b><span>山の仕事の、道しるべ</span></div>
   <div id="opVBubble"><span>ここまでが伐採区域!</span></div>
-  <button id="opSound" type="button">🔊 音を出す</button>
+  <button id="opSound" type="button">🔊 音あり</button>
   <div id="opBox">
 <svg width="390" height="844" viewBox="0 0 390 844" aria-hidden="true" style="position: absolute; left: 0; top: 0">
 <defs>
@@ -249,8 +271,8 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <p style="margin: 0; font-size: 16px; font-weight: 700">山の仕事の、道しるべ</p>
 </div>
   </div>
-  <span id="opSkip">押して飛ばす</span>
-  <div id="opFoot">v0.3.0 試験中 ・ 株式会社ネクサス</div>
+  <button id="opSkip" type="button">押して飛ばす</button>
+  <div id="opFoot">v0.3.2 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
@@ -273,7 +295,16 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     var origFinish = finish;
     finish = function () { try { vid.pause(); } catch (e) {} origFinish(); };
     op.removeEventListener('click', origFinish);
-    op.addEventListener('click', finish);
+    op.addEventListener('click', function () {
+      // 音なしで流れているときの最初のタップは「音を出す」。それ以外のタップは飛ばす
+      if (op.classList.contains('vid') && op.classList.contains('needtap') && vid.muted && !done) {
+        vid.muted = false; op.classList.remove('needtap');
+        document.getElementById('opSound').textContent = '🔊 音あり';
+        var pr = vid.play(); if (pr && pr.catch) pr.catch(function () {});
+        return;
+      }
+      finish();
+    });
     function fallback() {
       if (started || done) return;
       started = true;
@@ -293,22 +324,31 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       });
       vid.addEventListener('ended', function () { setTimeout(finish, 600); });
       vid.addEventListener('error', fallback);
-      var pr = vid.play && vid.play(); if (pr && pr.catch) pr.catch(function () { setTimeout(fallback, 300); });
+      // 基本は音あり(2026-11-23 社長「起動画面 基本音有り」)。ブラウザに止められたら音なしで流し、最初のタップで音を出す
+      vid.muted = false;
+      var pr = vid.play && vid.play();
+      if (pr && pr.catch) pr.catch(function () {
+        vid.muted = true; op.classList.add('needtap');
+        var pr2 = vid.play(); if (pr2 && pr2.catch) pr2.catch(function () { setTimeout(fallback, 300); });
+      });
       setTimeout(fallback, 2500); // 2.5 秒たっても流れ始めなければ絵のアニメ
     }
+    document.getElementById('opSkip').addEventListener('click', function (e) { e.stopPropagation(); finish(); });
     document.getElementById('opSound').addEventListener('click', function (e) {
       e.stopPropagation();
-      vid.muted = false; this.textContent = '🔊 音あり';
+      vid.muted = !vid.muted; op.classList.remove('needtap');
+      this.textContent = vid.muted ? '🔇 音なし' : '🔊 音あり';
       var pr = vid.play(); if (pr && pr.catch) pr.catch(function () {});
     });
+    setInterval(function () { var b = document.getElementById('opSound'); if (b && vid.muted && !op.classList.contains('needtap')) b.textContent = '🔇 音なし'; }, 500);
   })();
 </script>
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
-    <svg width="44" height="44" viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14 L78 70 L18 70 Z" fill="#e8a300" stroke="#17324e" stroke-width="5" stroke-linejoin="round"/></svg>
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.3.0 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.3.2 試験中 ・ 株式会社ネクサス</div></div>
   </div>
+  <div class="sp-cat"><img class="catHead" src="img/cat_head.png" alt="" style="width:64px;height:64px"><span id="spCatMsg">準備しています…</span></div>
   <ul class="sp-list">
     <li id="chkLib" class="wait"><span class="s">…</span><div>地図の部品<small>読み込んでいます</small></div></li>
     <li id="chkData" class="wait"><span class="s">…</span><div>保存した基準点・図面<small>調べています</small></div></li>
@@ -345,7 +385,13 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
   </div>
 </div>
 
+<div id="emptyCard" hidden>
+  <img class="catHead" src="img/cat_head.png" alt="" style="width:46px;height:46px">
+  <div>まず「基準点」から、現場の点を読み込もう</div>
+  <button id="emptyGo" type="button">基準点</button>
+</div>
 <div id="navCard" hidden>
+  <img class="catArrive" src="img/cat_head.png" alt="着いた">
   <svg id="nArrow" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3 L40 42 L24 33 L8 42 Z" fill="#e8a300" stroke="#17324e" stroke-width="2.5" stroke-linejoin="round"/></svg>
   <div>
     <div>目的 <span id="nName"></span></div>
@@ -356,7 +402,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </div>
 
 <div id="measCard" hidden>
-  <div class="mc-head"><b>📏 距離</b>
+  <div class="mc-head"><b><img class="catSm" src="img/cat_head.png" alt="">距離</b>
     <button id="mHere" type="button">現在地</button><button id="mUndo" type="button">戻す</button><button id="mClear" type="button">消す</button><button id="mEnd" type="button" aria-label="距離を測るのを終わる">✕</button>
   </div>
   <div id="mBody"></div>
@@ -375,7 +421,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </nav>
 
 <div id="sheet" hidden>
-  <div class="sh-head"><b id="shTitle"></b><button id="shClose" type="button">閉じる</button></div>
+  <div class="sh-head"><img class="catSm" src="img/cat_head.png" alt=""><b id="shTitle"></b><button id="shClose" type="button">閉じる</button></div>
 
   <section data-sheet="map">
     <div class="row" id="baseBtns">
@@ -456,6 +502,11 @@ function chk(id, state, html) {
   const li = document.getElementById(id); if (!li) return;
   li.className = state; li.querySelector('.s').textContent = CHK_MARK[state];
   li.querySelector('small').innerHTML = html;
+  // 黒猫の吹き出し: 全部そろった・直す所がある・準備中
+  const lis = Array.from(document.querySelectorAll('.sp-list > li'));
+  const m = document.getElementById('spCatMsg');
+  if (m) m.textContent = lis.some(x => x.className === 'ng') ? 'ここを直してね ↓(直さなくても「地図へ進む」で使えるよ)'
+    : lis.every(x => x.className === 'ok' || x.className === 'warn') ? '準備OK! 地図に行くよ' : '準備しています…';
 }
 /* 地図の部品が電波の途切れなどで読めなかったときは、2 回まで読み直す。駄目なら理由を出す */
 if (typeof window.L === 'undefined') {
@@ -478,7 +529,7 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.3.0(2026-11-23)試験中';
+const VERSION = 'v0.3.2(2026-11-23)試験中';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -696,7 +747,12 @@ function selectTarget(i, close) {
   if (curLL) map.fitBounds([[ll.lat, ll.lon], [curLL.lat, curLL.lon]], fitPad(19));
   else map.setView([ll.lat, ll.lon], Math.max(map.getZoom(), 18));
 }
+function updateEmpty() {
+  const el = document.getElementById('emptyCard');
+  if (el) el.hidden = !!(points.length || dwgRaw) || selectedIdx >= 0;
+}
 function drawPoints() {
+  updateEmpty();
   ptLayer.clearLayers();
   const many = points.length > 400;
   points.forEach((p, i) => {
@@ -977,7 +1033,7 @@ async function idbGet(key) { const db = await idb(); return new Promise((res, re
 async function idbDel(key) { const db = await idb(); return new Promise(res => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').delete(key); t.oncomplete = res; t.onerror = res; }); }
 
 function setDrawing(d, fit) {
-  dwgRaw = d; rebuildDrawingLL(); refreshDrawing();
+  dwgRaw = d; updateEmpty(); rebuildDrawingLL(); refreshDrawing();
   if (fit && dwgBounds) map.fitBounds(dwgBounds, fitPad(19));
 }
 $('#fDxf').addEventListener('change', async e => { const inp = e.target; await pickFile(inp.files[0], 'dwg'); inp.value = ''; });
@@ -1183,7 +1239,9 @@ function updateNav() {
     navAz = bearingDeg(xy, p);
     $('#nDist').textContent = d < 10 ? `${d.toFixed(2)} m` : `${d.toFixed(1)} m`;
     const err = calTransform ? `現地合わせ後・見込み ±${Math.max(1, Math.round(calTransform.maxDh * 100))}cm` : `GPS だけ・見込み ±${Math.round(curAcc || 10)}m`;
-    $('#nInfo').textContent = `${err}${curHeading() == null ? '・矢印は地図の上=北' : ''}`;
+    const arrived = d < 2;
+    $('#navCard').classList.toggle('arrived', arrived);
+    $('#nInfo').textContent = arrived ? '着いた! このあたりで目印(杭・鋲)を探してね' : `${err}${curHeading() == null ? '・矢印は地図の上=北' : ''}`;
     navLine.setLatLngs([[curLL.lat, curLL.lon], [tll.lat, tll.lon]]);
   }
   updateNavArrow();
@@ -1199,6 +1257,7 @@ function updateNavArrow() {
     $('#camMsg').textContent = `${points[selectedIdx]?.name ?? ''}${h == null ? '(向きが取れていません。矢印は北が上)' : ''}`;
   }
 }
+$('#emptyGo').addEventListener('click', () => showSheet('pts'));
 $('#nClose').addEventListener('click', () => { selectedIdx = -1; savePoints(); drawPoints(); renderPoints(); updateNav(); });
 
 /* ---------- 点名・文字の表示非表示(🏷) ---------- */
