@@ -116,54 +116,43 @@ tr.pt{cursor:pointer}
 #opFoot{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);text-align:center;font-size:12px;opacity:.85;z-index:2}
 /* 2 回目からは短く: 木が倒れる所から最後まで */
 #opening.short #opBox *{animation-delay:-4.9s !important}
-.g-walk{animation:gWalk 7s ease-in-out infinite}
-@keyframes gWalk{0%,28%{transform:translateX(0)}36%,54%{transform:translateX(70px)}60%,100%{transform:translateX(24px)}}
-.g-bob{animation:gBob 7s linear infinite}
-@keyframes gBob{0%,15%{transform:translate(0,0)}17%{transform:translate(1px,-1px)}19%{transform:translate(-1px,1px)}21%{transform:translate(1px,1px)}23%{transform:translate(-1px,0)}25%{transform:translate(0,0)}30%{transform:translate(0,-6px)}32%{transform:translate(0,0)}34%{transform:translate(0,-6px)}36%{transform:translate(0,0)}38%{transform:translate(1px,1px)}40%{transform:translate(-1px,0)}42%{transform:translate(1px,-1px)}44%{transform:translate(-1px,1px)}46%{transform:translate(1px,0)}48%{transform:translate(-1px,1px)}50%{transform:translate(1px,0)}52%,100%{transform:translate(0,0)}}
-.g-pull{transform-box:fill-box;transform-origin:90% 10%;animation:gPull 7s ease-in-out infinite}
-@keyframes gPull{0%,4%{transform:rotate(0)}8%{transform:rotate(55deg)}10%{transform:rotate(0)}13%{transform:rotate(60deg)}15%,100%{transform:rotate(0)}}
-.g-cord{transform-box:fill-box;transform-origin:100% 50%;transform:scaleX(.1);animation:gCord 7s ease-in-out infinite}
-@keyframes gCord{0%,4%{transform:scaleX(.1)}8%{transform:scaleX(1)}10%{transform:scaleX(.1)}13%{transform:scaleX(1.1)}15%,100%{transform:scaleX(.1)}}
-.g-chain{stroke-dasharray:4 5;animation:gChain .14s linear infinite}
-@keyframes gChain{to{stroke-dashoffset:-18}}
-.g-smoke{opacity:0;transform-box:fill-box;transform-origin:center;animation:gSmoke 7s ease-out infinite}
-.g-smoke.s2{animation-delay:.25s}.g-smoke.s3{animation-delay:.5s}
-@keyframes gSmoke{0%,15%{opacity:0;transform:translate(0,0) scale(.4)}18%{opacity:.75}32%{opacity:0;transform:translate(-30px,-60px) scale(2)}100%{opacity:0}}
-.g-shield{animation:gShield 7s ease-in-out infinite}
-@keyframes gShield{0%,26%{transform:translateY(0)}30%,72%{transform:translateY(22px)}76%,100%{transform:translateY(0)}}
-.g-face1{animation:gFace1 7s step-end infinite}
-@keyframes gFace1{0%{opacity:1}28%{opacity:0}74%{opacity:1}100%{opacity:1}}
-.g-face2{opacity:0;animation:gFace2 7s step-end infinite}
-@keyframes gFace2{0%{opacity:0}28%{opacity:1}54%{opacity:0}100%{opacity:0}}
-.g-face3{opacity:0;animation:gFace3 7s step-end infinite}
-@keyframes gFace3{0%{opacity:0}54%{opacity:1}74%{opacity:0}100%{opacity:0}}
-.g-dust{opacity:0;transform-box:fill-box;animation:gDust 7s linear infinite}
-.g-dust.p2{animation-delay:.1s}.g-dust.p3{animation-delay:.2s}.g-dust.p4{animation-delay:.3s}.g-dust.p5{animation-delay:.4s}.g-dust.p6{animation-delay:.5s}.g-dust.p7{animation-delay:.6s}
-@keyframes gDust{0%,37%{opacity:0;transform:translate(0,0)}38%{opacity:1}44%{opacity:0;transform:translate(-50px,30px) rotate(200deg)}45%{opacity:0;transform:translate(0,0)}46%{opacity:1}52%{opacity:0;transform:translate(-60px,10px) rotate(-180deg)}100%{opacity:0}}
-.g-kerf{transform-box:fill-box;transform-origin:0% 50%;transform:scaleX(0);animation:gKerf 7s linear infinite}
-@keyframes gKerf{0%,37%{transform:scaleX(0)}53%,100%{transform:scaleX(1)}}
-.g-tree{transform-box:view-box;transform-origin:300px 640px;animation:gTree 7s cubic-bezier(.62,0,.95,.5) infinite}
-@keyframes gTree{0%,58%{transform:rotate(0)}62%{transform:rotate(3deg)}68%{transform:rotate(16deg)}74%{transform:rotate(86deg)}76%{transform:rotate(81deg)}78%,100%{transform:rotate(86deg)}}
-.g-crown{transform-box:fill-box;transform-origin:50% 100%;animation:gCrown 7s ease-in-out infinite}
-@keyframes gCrown{0%,64%{transform:skewX(0)}71%{transform:skewX(-9deg)}75%{transform:skewX(10deg)}79%,100%{transform:skewX(0)}}
-.g-shake{animation:gShake 7s linear infinite}
-@keyframes gShake{0%,74%{transform:translateY(0)}75%{transform:translateY(5px)}76%{transform:translateY(-3px)}77%{transform:translateY(1px)}78%,100%{transform:translateY(0)}}
-.g-cloud{opacity:0;transform-box:fill-box;transform-origin:center;animation:gCloud 7s ease-out infinite}
-@keyframes gCloud{0%,74%{opacity:0;transform:scale(.3)}77%{opacity:.75}94%{opacity:0;transform:scale(2) translateY(-20px)}100%{opacity:0}}
-.g-bird{opacity:0;animation:gBird 7s ease-out infinite}
-.g-bird.b2{animation-delay:.15s}
-@keyframes gBird{0%,72%{opacity:0;transform:translate(0,0)}75%{opacity:1}92%{opacity:0;transform:translate(100px,-140px)}100%{opacity:0}}
-.g-b1{opacity:0;animation:gB1 7s ease-out infinite;transform-box:fill-box;transform-origin:0% 100%}
-@keyframes gB1{0%,16%{opacity:0;transform:scale(.6)}18%{opacity:1;transform:scale(1.05)}20%,26%{opacity:1;transform:scale(1)}28%,100%{opacity:0}}
-.g-b2{opacity:0;animation:gB2 7s ease-out infinite;transform-box:fill-box;transform-origin:0% 100%}
-@keyframes gB2{0%,55%{opacity:0;transform:scale(.6)}57%{opacity:1;transform:scale(1.05)}59%,68%{opacity:1;transform:scale(1)}70%,100%{opacity:0}}
-.g-b3{opacity:0;animation:gB3 7s ease-out infinite;transform-box:fill-box;transform-origin:0% 100%}
-@keyframes gB3{0%,79%{opacity:0;transform:scale(.6)}81%{opacity:1;transform:scale(1.05)}83%,100%{opacity:1;transform:scale(1)}}
-.g-mark{opacity:0;transform-box:fill-box;transform-origin:50% 100%;animation:gMark 7s ease-out infinite}
-@keyframes gMark{0%,78%{opacity:0;transform:scale(.4) translateY(-30px)}82%{opacity:1;transform:scale(1.15) translateY(0)}85%,100%{opacity:1;transform:scale(1)}}
-.g-title{opacity:0;animation:gTitle 7s ease-out infinite}
-@keyframes gTitle{0%,84%{opacity:0;transform:translateY(16px)}90%,100%{opacity:1;transform:translateY(0)}}
-@media (prefers-reduced-motion:reduce){.g-walk,.g-bob,.g-pull,.g-cord,.g-chain,.g-smoke,.g-shield,.g-dust,.g-kerf,.g-tree,.g-crown,.g-shake,.g-cloud,.g-bird,.g-b1,.g-b2,.g-face2,.g-face3{animation:none}.g-mark,.g-title,.g-b3{animation:none;opacity:1}}
+.k-walk{animation:kWalk 7s ease-in-out infinite}
+@keyframes kWalk{0%,28%{transform:translateX(0)}36%,54%{transform:translateX(-110px)}61%,100%{transform:translateX(-60px)}}
+.k-bob{animation:kBob 7s linear infinite}
+@keyframes kBob{0%,4%{transform:translate(0,0)}6%{transform:translate(0,-14px)}8%{transform:translate(0,0)}10%{transform:translate(0,-16px)}12%{transform:translate(0,0)}15%{transform:translate(2px,-1px)}16%{transform:translate(-2px,1px)}17%{transform:translate(2px,1px)}18%{transform:translate(-2px,-1px)}19%{transform:translate(2px,0)}20%{transform:translate(-2px,1px)}21%{transform:translate(1px,-1px)}22%{transform:translate(-1px,1px)}24%,28%{transform:translate(0,0)}30%{transform:translate(0,-8px)}32%{transform:translate(0,0)}34%{transform:translate(0,-8px)}36%{transform:translate(0,0)}38%{transform:translate(2px,1px)}40%{transform:translate(-2px,0)}42%{transform:translate(2px,-1px)}44%{transform:translate(-2px,1px)}46%{transform:translate(2px,0)}48%{transform:translate(-2px,1px)}50%{transform:translate(2px,0)}52%{transform:translate(-1px,0)}54%,100%{transform:translate(0,0)}}
+.k-smoke{opacity:0;transform-box:fill-box;transform-origin:center;animation:kSmoke 7s ease-out infinite}
+.k-smoke.s2{animation-delay:.25s}.k-smoke.s3{animation-delay:.5s}
+@keyframes kSmoke{0%,14%{opacity:0;transform:translate(0,0) scale(.4)}17%{opacity:.8}32%{opacity:0;transform:translate(-30px,-60px) scale(2.2)}100%{opacity:0}}
+.k-dust{opacity:0;transform-box:fill-box;animation:kDust 7s linear infinite}
+.k-dust.p2{animation-delay:.1s}.k-dust.p3{animation-delay:.2s}.k-dust.p4{animation-delay:.3s}.k-dust.p5{animation-delay:.4s}.k-dust.p6{animation-delay:.5s}.k-dust.p7{animation-delay:.6s}
+@keyframes kDust{0%,37%{opacity:0;transform:translate(0,0)}38%{opacity:1}44%{opacity:0;transform:translate(-40px,-40px) rotate(200deg)}45%{opacity:0;transform:translate(0,0)}46%{opacity:1}52%{opacity:0;transform:translate(-50px,-20px) rotate(-180deg)}100%{opacity:0}}
+.k-kerf{transform-box:fill-box;transform-origin:100% 50%;transform:scaleX(0);animation:kKerf 7s linear infinite}
+@keyframes kKerf{0%,37%{transform:scaleX(0)}53%,100%{transform:scaleX(1)}}
+.k-tree{transform-box:view-box;transform-origin:82px 640px;animation:kTree 7s cubic-bezier(.62,0,.95,.5) infinite}
+@keyframes kTree{0%,58%{transform:rotate(0)}62%{transform:rotate(-3deg)}68%{transform:rotate(-16deg)}74%{transform:rotate(-86deg)}76%{transform:rotate(-81deg)}78%,100%{transform:rotate(-86deg)}}
+.k-crown{transform-box:fill-box;transform-origin:50% 100%;animation:kCrown 7s ease-in-out infinite}
+@keyframes kCrown{0%,64%{transform:skewX(0)}71%{transform:skewX(9deg)}75%{transform:skewX(-10deg)}79%,100%{transform:skewX(0)}}
+.k-shake{animation:kShake 7s linear infinite}
+@keyframes kShake{0%,74%{transform:translateY(0)}75%{transform:translateY(5px)}76%{transform:translateY(-3px)}77%{transform:translateY(1px)}78%,100%{transform:translateY(0)}}
+.k-cloud{opacity:0;transform-box:fill-box;transform-origin:center;animation:kCloud 7s ease-out infinite}
+@keyframes kCloud{0%,74%{opacity:0;transform:scale(.3)}77%{opacity:.75}94%{opacity:0;transform:scale(2) translateY(-20px)}100%{opacity:0}}
+.k-bird{opacity:0;animation:kBird 7s ease-out infinite}
+.k-bird.b2{animation-delay:.15s}
+@keyframes kBird{0%,72%{opacity:0;transform:translate(0,0)}75%{opacity:1}92%{opacity:0;transform:translate(-100px,-140px)}100%{opacity:0}}
+.k-b1{opacity:0;animation:kB1 7s ease-out infinite;transform-origin:100% 100%}
+@keyframes kB1{0%,15%{opacity:0;transform:scale(.6)}17%{opacity:1;transform:scale(1.05)}19%,27%{opacity:1;transform:scale(1)}29%,100%{opacity:0}}
+.k-b2{opacity:0;animation:kB2 7s ease-out infinite;transform-origin:100% 100%}
+@keyframes kB2{0%,55%{opacity:0;transform:scale(.6)}57%{opacity:1;transform:scale(1.05)}59%,69%{opacity:1;transform:scale(1)}71%,100%{opacity:0}}
+.k-b3{opacity:0;animation:kB3 7s ease-out infinite;transform-origin:100% 100%}
+@keyframes kB3{0%,79%{opacity:0;transform:scale(.6)}81%{opacity:1;transform:scale(1.05)}83%,100%{opacity:1;transform:scale(1)}}
+.k-mark{opacity:0;transform-box:fill-box;transform-origin:50% 100%;animation:kMark 7s ease-out infinite}
+@keyframes kMark{0%,78%{opacity:0;transform:scale(.4) translateY(-30px)}82%{opacity:1;transform:scale(1.15) translateY(0)}85%,100%{opacity:1;transform:scale(1)}}
+.k-title{opacity:0;animation:kTitle 7s ease-out infinite}
+@keyframes kTitle{0%,84%{opacity:0;transform:translateY(16px)}90%,100%{opacity:1;transform:translateY(0)}}
+#kCat{position:absolute;left:150px;top:410px;width:240px;height:240px}
+#kCat img{width:240px;height:240px;display:block}
+#kCat svg{position:absolute;left:0;top:0;overflow:visible}
+@media (prefers-reduced-motion:reduce){.k-walk,.k-bob,.k-smoke,.k-dust,.k-kerf,.k-tree,.k-crown,.k-shake,.k-cloud,.k-bird,.k-b1,.k-b2{animation:none}.k-mark,.k-title,.k-b3{animation:none;opacity:1}}
 
 /* 点検画面 */
 #splash{position:fixed;inset:0;z-index:2000;background:#f4f6f8;color:var(--ink);overflow:auto;
@@ -197,96 +186,51 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </head>
 <body>
 <!-- 起動画面(2026-11-23 社長「起動画面作って その後に点検画面」)。1 秒ほど出して点検画面へ -->
-<!-- 起動画面(2026-11-23 社長決定: キャラクター「しるべ」(仮)がチェーンソーで伐る。案G)。
+<!-- 起動画面(2026-11-23 社長決定: 黒猫(フォレスト総建のヘルメット)がチェーンソーで伐る。2026-11-23 社長「動画はこのキャラクタつかう」)。
      初めては 7 秒の全部、2 回目からは木が倒れる所から約 2 秒。押すと飛ばす。JS の読み込みに関わらず下がる -->
 <div id="opening" role="button" tabindex="0" aria-label="起動画面。押すと飛ばします">
   <div id="opBox">
 <svg width="390" height="844" viewBox="0 0 390 844" aria-hidden="true" style="position: absolute; left: 0; top: 0">
 <defs>
-<linearGradient id="gSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17324e"></stop><stop offset=".55" stop-color="#2d5a6e"></stop><stop offset="1" stop-color="#7fb08f"></stop></linearGradient>
-<linearGradient id="gCedar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f7a4f"></stop><stop offset="1" stop-color="#22502f"></stop></linearGradient>
-<linearGradient id="gBark" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a351f"></stop><stop offset=".5" stop-color="#96613a"></stop><stop offset="1" stop-color="#4a2c18"></stop></linearGradient>
-<radialGradient id="gSkin" cx=".45" cy=".4" r=".7"><stop offset="0" stop-color="#ffdcb8"></stop><stop offset="1" stop-color="#e9b48a"></stop></radialGradient>
-<linearGradient id="gHelm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffbe3b"></stop><stop offset=".7" stop-color="#e8a300"></stop><stop offset="1" stop-color="#b57d00"></stop></linearGradient>
-<linearGradient id="gJacket" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2e6292"></stop><stop offset="1" stop-color="#173552"></stop></linearGradient>
-<g id="gBg"><rect x="-3" y="0" width="6" height="90" fill="#24402e"></rect><path d="M0 -70 L22 0 L-22 0 Z" fill="#2e5a3c"></path><path d="M0 -40 L26 40 L-26 40 Z" fill="#2e5a3c"></path></g>
+<linearGradient id="kSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17324e"></stop><stop offset=".55" stop-color="#2d5a6e"></stop><stop offset="1" stop-color="#7fb08f"></stop></linearGradient>
+<linearGradient id="kCedar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f7a4f"></stop><stop offset="1" stop-color="#22502f"></stop></linearGradient>
+<linearGradient id="kBark" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5a351f"></stop><stop offset=".5" stop-color="#96613a"></stop><stop offset="1" stop-color="#4a2c18"></stop></linearGradient>
+<g id="kBg"><rect x="-3" y="0" width="6" height="90" fill="#24402e"></rect><path d="M0 -70 L22 0 L-22 0 Z" fill="#2e5a3c"></path><path d="M0 -40 L26 40 L-26 40 Z" fill="#2e5a3c"></path></g>
 </defs>
-<g class="g-shake">
-<rect x="0" y="0" width="390" height="844" fill="url(#gSky)"></rect>
-<g opacity=".7"><use href="#gBg" x="30" y="520"></use><use href="#gBg" x="80" y="540"></use><use href="#gBg" x="360" y="530"></use><use href="#gBg" x="220" y="560"></use></g>
+<g class="k-shake">
+<rect x="0" y="0" width="390" height="844" fill="url(#kSky)"></rect>
+<g opacity=".7"><use href="#kBg" x="30" y="530"></use><use href="#kBg" x="170" y="540"></use><use href="#kBg" x="360" y="520"></use><use href="#kBg" x="260" y="560"></use></g>
 <path d="M0 640 Q 140 626 260 640 T 390 634 L 390 844 L 0 844 Z" fill="#5c7a3c"></path>
 <path d="M0 660 L390 654 L390 844 L0 844 Z" fill="#43592b"></path>
-<ellipse cx="300" cy="641" rx="26" ry="6" fill="#2a2414" opacity=".6"></ellipse>
-<g class="g-mark"><path d="M300 600 L318 634 L282 634 Z" fill="#e8a300" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round"></path><circle cx="300" cy="624" r="3" fill="#17324e"></circle></g>
-<g class="g-tree">
-<rect x="288" y="330" width="24" height="312" fill="url(#gBark)"></rect>
-<path d="M294 340 L295 630 M304 340 L305 630" stroke="#3a2214" stroke-width="1.5" opacity=".6"></path>
-<g class="g-crown"><path d="M300 130 L338 240 L318 240 L350 340 L324 340 L356 430 L244 430 L276 340 L250 340 L282 240 L262 240 Z" fill="url(#gCedar)"></path><path d="M300 130 L322 196 L300 186 Z" fill="#5a9a6a" opacity=".7"></path></g>
-<rect class="g-kerf" x="288" y="604" width="24" height="3" fill="#2a1408"></rect>
+<ellipse cx="82" cy="641" rx="26" ry="6" fill="#2a2414" opacity=".6"></ellipse>
+<g class="k-mark"><path d="M82 600 L100 634 L64 634 Z" fill="#e8a300" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round"></path><circle cx="82" cy="624" r="3" fill="#17324e"></circle></g>
+<g class="k-tree">
+<rect x="70" y="330" width="24" height="312" fill="url(#kBark)"></rect>
+<path d="M76 340 L77 630 M86 340 L87 630" stroke="#3a2214" stroke-width="1.5" opacity=".6"></path>
+<g class="k-crown"><path d="M82 130 L120 240 L100 240 L132 340 L106 340 L138 430 L26 430 L58 340 L32 340 L64 240 L44 240 Z" fill="url(#kCedar)"></path><path d="M82 130 L104 196 L82 186 Z" fill="#5a9a6a" opacity=".7"></path></g>
+<rect class="k-kerf" x="70" y="614" width="24" height="3" fill="#2a1408"></rect>
 </g>
-<circle class="g-cloud" cx="360" cy="630" r="48" fill="#cdbf9e"></circle>
-<circle class="g-cloud" cx="410" cy="624" r="40" fill="#cdbf9e"></circle>
-<path class="g-bird" d="M260 320 q6 -6 12 0 q6 -6 12 0" fill="none" stroke="#0f2338" stroke-width="2.5"></path>
-<path class="g-bird b2" d="M240 350 q5 -5 10 0 q5 -5 10 0" fill="none" stroke="#0f2338" stroke-width="2.5"></path>
-<g transform="translate(110 640) scale(.8)">
-<g class="g-walk"><g class="g-bob">
-<ellipse cx="0" cy="2" rx="62" ry="9" fill="#000" opacity=".18"></ellipse>
-<ellipse cx="-20" cy="-6" rx="17" ry="9" fill="#1d1f22"></ellipse><ellipse cx="22" cy="-6" rx="17" ry="9" fill="#1d1f22"></ellipse>
-<path d="M-34 -78 L-6 -78 L-8 -10 L-32 -10 Z" fill="#33383e"></path><path d="M6 -78 L34 -78 L32 -10 L8 -10 Z" fill="#33383e"></path>
-<path d="M-32 -60 L-8 -60 L-8 -50 L-32 -50 Z M8 -60 L32 -60 L32 -50 L8 -50 Z" fill="#e8a300"></path>
-<path d="M-44 -168 Q 0 -182 44 -168 L 46 -74 L -46 -74 Z" fill="url(#gJacket)"></path>
-<path d="M-46 -112 L46 -112 L46 -102 L-46 -102 Z" fill="#e8a300"></path>
-<path d="M0 -170 L0 -76" stroke="#0d1e30" stroke-width="2"></path>
-<circle cx="0" cy="-222" r="50" fill="url(#gSkin)"></circle>
-<circle cx="-50" cy="-216" r="14" fill="#e8a300"></circle><circle cx="-50" cy="-216" r="7" fill="#26292c"></circle>
-<circle cx="50" cy="-216" r="14" fill="#e8a300"></circle><circle cx="50" cy="-216" r="7" fill="#26292c"></circle>
-<g class="g-face1">
-<path d="M-28 -214 Q -18 -220 -8 -214 M8 -214 Q 18 -220 28 -214" fill="none" stroke="#3a2a1c" stroke-width="3.5" stroke-linecap="round"></path>
-<ellipse cx="-18" cy="-200" rx="6" ry="8" fill="#17324e"></ellipse><ellipse cx="18" cy="-200" rx="6" ry="8" fill="#17324e"></ellipse>
-<circle cx="-16" cy="-203" r="2" fill="#fff"></circle><circle cx="20" cy="-203" r="2" fill="#fff"></circle>
-<ellipse cx="-32" cy="-186" rx="8" ry="5" fill="#f08c7a" opacity=".55"></ellipse><ellipse cx="32" cy="-186" rx="8" ry="5" fill="#f08c7a" opacity=".55"></ellipse>
-<path d="M-12 -184 Q 0 -170 12 -184 Q 0 -178 -12 -184 Z" fill="#b5473a"></path>
-</g>
-<g class="g-face2">
-<path d="M-28 -214 L-8 -208 M28 -214 L8 -208" stroke="#3a2a1c" stroke-width="3.5" stroke-linecap="round"></path>
-<ellipse cx="-18" cy="-200" rx="5" ry="6" fill="#17324e"></ellipse><ellipse cx="18" cy="-200" rx="5" ry="6" fill="#17324e"></ellipse>
-<path d="M-10 -180 L10 -180" stroke="#7a3a2a" stroke-width="4" stroke-linecap="round"></path>
-</g>
-<g class="g-face3">
-<path d="M-28 -214 L-8 -208 M28 -214 L8 -208" stroke="#3a2a1c" stroke-width="3.5" stroke-linecap="round"></path>
-<ellipse cx="-18" cy="-200" rx="5" ry="6" fill="#17324e"></ellipse><ellipse cx="18" cy="-200" rx="5" ry="6" fill="#17324e"></ellipse>
-<ellipse cx="0" cy="-180" rx="10" ry="8" fill="#7a2a22"></ellipse>
-</g>
-<path d="M-56 -226 Q -56 -292 0 -294 Q 56 -292 56 -226 Z" fill="url(#gHelm)"></path>
-<path d="M-62 -228 Q 0 -244 62 -228 Q 64 -220 58 -218 Q 0 -232 -58 -218 Q -64 -220 -62 -228 Z" fill="#c98a00"></path>
-<path d="M-40 -276 Q 0 -288 40 -276" fill="none" stroke="#fff3cf" stroke-width="5" stroke-linecap="round" opacity=".7"></path>
-<path d="M0 -286 L13 -263 L-13 -263 Z" fill="#ffffff"></path><circle cx="0" cy="-268" r="3" fill="#17324e"></circle>
-<g class="g-shield"><rect x="-46" y="-252" width="92" height="14" rx="5" fill="#8a9aa3" opacity=".8"></rect><path d="M-44 -248 L44 -248 M-44 -243 L44 -243" stroke="#5f6e76" stroke-width="1.2"></path></g>
-<rect x="38" y="-122" width="58" height="38" rx="9" fill="#e8a300"></rect>
-<rect x="44" y="-116" width="24" height="7" rx="2" fill="#1d1500" opacity=".35"></rect>
-<path d="M44 -122 Q 62 -146 92 -126" fill="none" stroke="#1d2730" stroke-width="7" stroke-linecap="round"></path>
-<rect x="94" y="-112" width="110" height="13" rx="6.5" fill="#c4ccd4"></rect>
-<rect class="g-chain" x="94" y="-112" width="110" height="13" rx="6.5" fill="none" stroke="#3b4652" stroke-width="2.2"></rect>
-<rect x="28" y="-108" width="12" height="16" rx="3" fill="#1d2730"></rect>
-<rect class="g-cord" x="-6" y="-102" width="36" height="2" fill="#e9eef2"></rect>
-<circle class="g-smoke" cx="38" cy="-118" r="7" fill="#c4c9c3"></circle><circle class="g-smoke s2" cx="38" cy="-118" r="6" fill="#c4c9c3"></circle><circle class="g-smoke s3" cx="38" cy="-118" r="5" fill="#c4c9c3"></circle>
-<path d="M40 -160 Q 64 -140 62 -112" fill="none" stroke="#24527c" stroke-width="20" stroke-linecap="round"></path><circle cx="62" cy="-110" r="11" fill="#5b6b4e"></circle>
-<g class="g-pull"><path d="M-42 -160 Q -40 -130 -14 -112" fill="none" stroke="#24527c" stroke-width="20" stroke-linecap="round"></path><circle cx="-8" cy="-108" r="11" fill="#5b6b4e"></circle></g>
-</g></g>
-</g>
-<g><rect class="g-dust" x="286" y="602" width="5" height="3" fill="#f0d6a2"></rect><rect class="g-dust p2" x="286" y="606" width="4" height="4" fill="#e9c98f"></rect><rect class="g-dust p3" x="285" y="600" width="5" height="2" fill="#d9b27a"></rect><rect class="g-dust p4" x="287" y="604" width="3" height="3" fill="#f0d6a2"></rect><rect class="g-dust p5" x="286" y="603" width="5" height="3" fill="#e9c98f"></rect><rect class="g-dust p6" x="285" y="605" width="4" height="3" fill="#d9b27a"></rect><rect class="g-dust p7" x="287" y="601" width="4" height="2" fill="#f0d6a2"></rect></g>
+<circle class="k-cloud" cx="10" cy="630" r="48" fill="#cdbf9e"></circle>
+<circle class="k-cloud" cx="-30" cy="624" r="40" fill="#cdbf9e"></circle>
+<path class="k-bird" d="M120 320 q6 -6 12 0 q6 -6 12 0" fill="none" stroke="#0f2338" stroke-width="2.5"></path>
+<path class="k-bird b2" d="M150 350 q5 -5 10 0 q5 -5 10 0" fill="none" stroke="#0f2338" stroke-width="2.5"></path>
+<g><rect class="k-dust" x="94" y="612" width="5" height="3" fill="#f0d6a2"></rect><rect class="k-dust p2" x="94" y="616" width="4" height="4" fill="#e9c98f"></rect><rect class="k-dust p3" x="95" y="610" width="5" height="2" fill="#d9b27a"></rect><rect class="k-dust p4" x="93" y="614" width="3" height="3" fill="#f0d6a2"></rect><rect class="k-dust p5" x="94" y="613" width="5" height="3" fill="#e9c98f"></rect><rect class="k-dust p6" x="95" y="615" width="4" height="3" fill="#d9b27a"></rect><rect class="k-dust p7" x="93" y="611" width="4" height="2" fill="#f0d6a2"></rect></g>
 </g>
 </svg>
-<div class="g-b1" style="position: absolute; left: 30px; top: 380px; background: #ffffff; color: #17324e; font-size: 22px; font-weight: 900; padding: 8px 14px; border-radius: 18px; box-shadow: 0 3px 10px rgba(0,0,0,.25)">ブルルルン!</div>
-<div class="g-b2" style="position: absolute; left: 40px; top: 370px; background: #ffffff; color: #b8332a; font-size: 26px; font-weight: 900; padding: 8px 14px; border-radius: 18px; box-shadow: 0 3px 10px rgba(0,0,0,.25)">倒れるぞー!</div>
-<div class="g-b3" style="position: absolute; left: 70px; top: 384px; background: #ffffff; color: #17324e; font-size: 20px; font-weight: 900; padding: 8px 14px; border-radius: 18px; box-shadow: 0 3px 10px rgba(0,0,0,.25)">ここが基準点!</div>
-<div class="g-title" style="position: absolute; left: 0; right: 0; top: 120px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-shadow: 0 2px 10px rgba(0,0,0,.4)">
+<div id="kCat" class="k-walk"><div class="k-bob" style="position: relative; width: 240px; height: 240px">
+<img src="img/cat.png" alt="" width="240" height="240">
+<svg width="240" height="240" viewBox="0 0 240 240" aria-hidden="true"><circle class="k-smoke" cx="72" cy="176" r="7" fill="#c4c9c3"></circle><circle class="k-smoke s2" cx="72" cy="176" r="6" fill="#c4c9c3"></circle><circle class="k-smoke s3" cx="72" cy="176" r="5" fill="#c4c9c3"></circle></svg>
+</div></div>
+<div class="k-b1" style="position: absolute; right: 24px; top: 360px; background: #ffffff; color: #17324e; font-size: 22px; font-weight: 900; padding: 8px 14px; border-radius: 18px; box-shadow: 0 3px 10px rgba(0,0,0,.25)">ブルルルン!</div>
+<div class="k-b2" style="position: absolute; right: 30px; top: 360px; background: #ffffff; color: #b8332a; font-size: 26px; font-weight: 900; padding: 8px 14px; border-radius: 18px; box-shadow: 0 3px 10px rgba(0,0,0,.25)">倒れるぞー!</div>
+<div class="k-b3" style="position: absolute; right: 36px; top: 366px; background: #ffffff; color: #17324e; font-size: 20px; font-weight: 900; padding: 8px 14px; border-radius: 18px; box-shadow: 0 3px 10px rgba(0,0,0,.25)">ここが基準点!</div>
+<div class="k-title" style="position: absolute; left: 0; right: 0; top: 120px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-shadow: 0 2px 10px rgba(0,0,0,.4)">
 <h1 style="margin: 0; font-size: 34px; font-weight: 900; letter-spacing: .04em">ECP基準点ナビ</h1>
 <p style="margin: 0; font-size: 16px; font-weight: 700">山の仕事の、道しるべ</p>
 </div>
   </div>
   <span id="opSkip">押して飛ばす</span>
-  <div id="opFoot">v0.2.8 試験中 ・ 株式会社ネクサス</div>
+  <div id="opFoot">v0.2.9 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
@@ -312,7 +256,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <div id="splash">
   <div class="sp-head">
     <svg width="44" height="44" viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14 L78 70 L18 70 Z" fill="#e8a300" stroke="#17324e" stroke-width="5" stroke-linejoin="round"/></svg>
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.2.8 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.2.9 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <ul class="sp-list">
     <li id="chkLib" class="wait"><span class="s">…</span><div>地図の部品<small>読み込んでいます</small></div></li>
@@ -483,7 +427,7 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.2.8(2026-11-23)試験中';
+const VERSION = 'v0.2.9(2026-11-23)試験中';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
