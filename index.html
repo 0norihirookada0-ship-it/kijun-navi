@@ -53,6 +53,20 @@ button{font:inherit;color:inherit}
 #fabs{position:fixed;right:10px;z-index:1000;bottom:calc(var(--barH) + env(safe-area-inset-bottom,0px) + 10px);display:grid;gap:10px}
 #fabs button{width:52px;height:52px;border-radius:50%;border:0;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.3);font-size:23px;cursor:pointer}
 #fabs button.on{background:var(--navy);color:#fff}
+#fabs button.off{opacity:.55}
+/* 距離を測る */
+#measCard{position:fixed;left:8px;right:8px;z-index:1001;bottom:calc(var(--barH) + env(safe-area-inset-bottom,0px) + 10px);margin-right:64px;
+  background:rgba(255,255,255,.95);border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.25);padding:6px 8px;font-size:12.5px}
+.mc-head{display:flex;flex-wrap:nowrap;align-items:center;gap:4px}
+.mc-head b{margin-right:auto;color:#a61e4d}
+.mc-head button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:4px 8px;font-size:12.5px;font-weight:700;white-space:nowrap}
+#mBody{margin-top:3px;line-height:1.4}
+#mBody .big{font-size:19px;font-weight:800;color:#a61e4d;font-variant-numeric:tabular-nums}
+#mBody .sub{color:var(--muted);font-size:12.5px}
+.mlabel{background:#a61e4d;color:#fff;font-weight:700;font-size:12px;padding:1px 6px;border-radius:9px;white-space:nowrap;transform:translate(-50%,-50%);display:inline-block}
+.mptlabel{background:#fff;color:#a61e4d;border:1px solid #a61e4d;font-weight:700;font-size:11px;padding:0 5px;border-radius:8px;white-space:nowrap;display:inline-block;transform:translate(8px,-50%)}
+/* 図面の文字 */
+.dtext{color:#1f2d3d;font-size:11px;font-weight:700;white-space:nowrap;transform-origin:0 100%;text-shadow:0 0 2px #fff,0 0 2px #fff;position:absolute;bottom:0;left:0;pointer-events:none}
 /* 下: ボタンの帯 */
 #bar{position:fixed;left:0;right:0;bottom:0;z-index:1000;height:calc(var(--barH) + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);
   background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr)}
@@ -145,7 +159,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     <div class="op-sub">現場の基準点まで、地図と矢印で案内します</div>
     <div class="op-bar"><i></i></div>
   </div>
-  <div class="op-foot">v0.2.5 試験中 ・ 株式会社ネクサス</div>
+  <div class="op-foot">v0.2.6 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   // 起動画面は JS の読み込みに関わらず 1.2 秒で下げ、点検画面を見せる
@@ -159,7 +173,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <div id="splash">
   <div class="sp-head">
     <svg width="44" height="44" viewBox="0 0 96 96" aria-hidden="true"><path d="M48 14 L78 70 L18 70 Z" fill="#e8a300" stroke="#17324e" stroke-width="5" stroke-linejoin="round"/></svg>
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.2.5 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.2.6 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <ul class="sp-list">
     <li id="chkLib" class="wait"><span class="s">…</span><div>地図の部品<small>読み込んでいます</small></div></li>
@@ -207,7 +221,15 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
   <button id="nClose" type="button">やめる</button>
 </div>
 
+<div id="measCard" hidden>
+  <div class="mc-head"><b>📏 距離</b>
+    <button id="mHere" type="button">現在地</button><button id="mUndo" type="button">戻す</button><button id="mClear" type="button">消す</button><button id="mEnd" type="button" aria-label="距離を測るのを終わる">✕</button>
+  </div>
+  <div id="mBody"></div>
+</div>
 <div id="fabs">
+  <button id="btnLabels" type="button" title="点名・文字を出す/隠す" aria-label="点名・文字を出す/隠す">🏷</button>
+  <button id="btnMeasure" type="button" title="距離を測る" aria-label="距離を測る">📏</button>
   <button id="btnHere" type="button" title="現在地に戻る" aria-label="現在地に戻る">◎</button>
   <button id="btnCam" type="button" title="カメラ" aria-label="カメラ">📷</button>
 </div>
@@ -279,7 +301,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       <ol><li>LINE のトークでファイルを押して「保存」(「ダウンロード」に入ります)</li><li>ここに戻って選ぶボタン →「ダウンロード」から選ぶ</li></ol>
     </details>
     <p id="dwgMsg" class="msg"></p>
-    <p class="note">線・ポリライン・円・点を地図に重ねます(文字・ハッチ・ブロックは出しません)。軽くするため、見えている範囲だけを描き、縮小しているときは短い線を省きます。図面は端末に残り、次に開いたときは地図が出たあとで読み出します。</p>
+    <p class="note">線・ポリライン・円・円弧・点・設計面の三角形(3DFACE)と文字を地図に重ねます(ハッチ・ブロックは出しません)。文字は右の 🏷 が入で、拡大したときに出ます。軽くするため、見えている範囲だけを描き、縮小しているときは短い線を省きます。図面は端末に残り、次に開いたときは地図が出たあとで読み出します。</p>
   </section>
 </div>
 
@@ -322,7 +344,7 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.2.5(2026-11-23)試験中';
+const VERSION = 'v0.2.6(2026-11-23)試験中';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -458,6 +480,8 @@ $$('#baseBtns button').forEach(b => b.addEventListener('click', () => setBase(b.
 
 const dwgLayer = L.polyline([], { renderer: canvasR, color: '#2f3d4d', weight: 1.3, opacity: .9, interactive: false, smoothFactor: 1.5 }).addTo(map);
 const dwgPtLayer = L.layerGroup().addTo(map);
+const dwgTextLayer = L.layerGroup().addTo(map);
+let labelsOn = localStorage.getItem('kn.labels') !== '0'; // 点名・図面の文字を出すか
 setBase(curBase); // 図面の線の色も背景に合わせるので、線の層を作ってから
 const ptLayer = L.layerGroup().addTo(map);
 const navLine = L.polyline([], { renderer: canvasR, color: '#ff5a00', weight: 3, dashArray: '8 6', interactive: false }).addTo(map);
@@ -540,14 +564,14 @@ function selectTarget(i, close) {
 }
 function drawPoints() {
   ptLayer.clearLayers();
-  const many = points.length > 150;
+  const many = points.length > 400;
   points.forEach((p, i) => {
     const ll = xy2latlon(p.X, p.Y, zoneNo());
     const sel = i === selectedIdx;
     const icon = L.divIcon({ className: '', html: `<div class="ptTri${sel ? ' sel' : ''}"></div>`, iconSize: sel ? [24, 21] : [18, 16], iconAnchor: sel ? [12, 21] : [9, 16] });
     const m = L.marker([ll.lat, ll.lon], { icon, zIndexOffset: sel ? 900 : 0 });
-    if (!many || sel) m.bindTooltip(esc(p.name), { permanent: true, direction: 'right', offset: [8, -8], className: 'ptlabel' });
-    m.on('click', () => selectTarget(i, false));
+    if (sel || (labelsOn && !many)) m.bindTooltip(esc(p.name), { permanent: true, direction: 'right', offset: [8, -8], className: 'ptlabel' });
+    m.on('click', () => { if (measuring) addMeasurePoint(ptToMeas(i)); else selectTarget(i, false); });
     m.addTo(ptLayer);
   });
 }
@@ -602,9 +626,19 @@ $('#zoneChip').textContent = `第${zoneNo()}系`;
 
 /* ---------- 図面(DXF)。読み込みは裏(Web Worker)で行い、画面を止めない ---------- */
 function parseDxfFlat(text) {
-  // LINE・LWPOLYLINE・POLYLINE+VERTEX・POINT・CIRCLE を、線分 [x1,y1,x2,y2,...] と点 [x,y,...] の平らな配列で返す
+  // LINE・LWPOLYLINE・POLYLINE+VERTEX・POINT・CIRCLE・ARC・3DFACE を、線分 [x1,y1,x2,y2,...] と点 [x,y,...] の平らな配列で返す。
+  // TEXT・MTEXT は文字の一覧 [{x,y,t,r}] で返す。3DFACE(設計面の三角形)は、隣どうしで重なる辺を 1 本にまとめる
   const raw = text.replace(/\r+\n/g, '\n').split(/\n|\r/); // 二重の改行(\r\r\n)にも耐える
-  const segs = [], pts = [];
+  const segs = [], pts = [], texts = [];
+  const faceSeen = new Set();
+  const addEdge = (ax, ay, bx, by) => {
+    if (ax === bx && ay === by) return;
+    const k1 = ax.toFixed(3) + ',' + ay.toFixed(3), k2 = bx.toFixed(3) + ',' + by.toFixed(3);
+    const key = k1 < k2 ? k1 + '|' + k2 : k2 + '|' + k1;
+    if (faceSeen.has(key)) return;
+    faceSeen.add(key); segs.push(ax, ay, bx, by);
+  };
+  const cleanMtext = t => t.replace(/\\P/g, ' ').replace(/\\[A-Za-z][^;\\{}]*;/g, '').replace(/\\[~ ]/g, ' ').replace(/[{}]/g, '').trim();
   let i = 0;
   while (i + 1 < raw.length && !(raw[i].trim() === '2' && raw[i + 1].trim() === 'ENTITIES')) i += 2;
   i += 2;
@@ -617,6 +651,27 @@ function parseDxfFlat(text) {
       for (let k = 0; k + 1 < v.length; k++) segs.push(v[k].x, v[k].y, v[k + 1].x, v[k + 1].y);
       if (cur.closed && v.length > 2) segs.push(v[v.length - 1].x, v[v.length - 1].y, v[0].x, v[0].y);
     } else if (type === 'POINT') { if (Number.isFinite(cur.x) && Number.isFinite(cur.y)) pts.push(cur.x, cur.y); }
+    else if (type === 'ARC') {
+      if (Number.isFinite(cur.cx) && Number.isFinite(cur.cy) && cur.r > 0) {
+        const a0 = (cur.a1 || 0) * Math.PI / 180;
+        let sweep = ((cur.a2 ?? 360) - (cur.a1 || 0)) % 360; if (sweep <= 0) sweep += 360;
+        const n = Math.max(4, Math.ceil(sweep / 10)), da = sweep * Math.PI / 180 / n;
+        for (let k = 0; k < n; k++) {
+          const a1 = a0 + da * k, a2 = a0 + da * (k + 1);
+          segs.push(cur.cx + cur.r * Math.cos(a1), cur.cy + cur.r * Math.sin(a1), cur.cx + cur.r * Math.cos(a2), cur.cy + cur.r * Math.sin(a2));
+        }
+      }
+    } else if (type === '3DFACE') {
+      const P = [0, 1, 2, 3].map(k => [cur['x' + k], cur['y' + k]]);
+      if (P.slice(0, 3).every(q => Number.isFinite(q[0]) && Number.isFinite(q[1]))) {
+        const tri = !Number.isFinite(P[3][0]) || (P[3][0] === P[2][0] && P[3][1] === P[2][1]);
+        const ring = tri ? [P[0], P[1], P[2]] : P;
+        for (let k = 0; k < ring.length; k++) { const a = ring[k], b = ring[(k + 1) % ring.length]; addEdge(a[0], a[1], b[0], b[1]); }
+      }
+    } else if (type === 'TEXT' || type === 'MTEXT') {
+      const t = type === 'MTEXT' ? cleanMtext((cur.t3 || '') + (cur.t || '')) : (cur.t || '').trim();
+      if (t && Number.isFinite(cur.x) && Number.isFinite(cur.y)) texts.push({ x: cur.x, y: cur.y, t: t.slice(0, 60), r: cur.r || 0 });
+    }
     else if (type === 'CIRCLE') {
       if (Number.isFinite(cur.cx) && Number.isFinite(cur.cy) && cur.r > 0) {
         const n = 24;
@@ -635,7 +690,7 @@ function parseDxfFlat(text) {
       if (val === 'SEQEND' && type === 'POLYLINE') { flush(); continue; }
       if (type !== 'POLYLINE' || val !== 'VERTEX') flush();
       if (val === 'ENDSEC') break;
-      if (val === 'LINE' || val === 'POINT' || val === 'CIRCLE') { type = val; cur = {}; }
+      if (val === 'LINE' || val === 'POINT' || val === 'CIRCLE' || val === 'ARC' || val === '3DFACE' || val === 'TEXT' || val === 'MTEXT') { type = val; cur = {}; }
       else if (val === 'LWPOLYLINE' || val === 'POLYLINE') { type = val; cur = { v: [], closed: false }; }
       continue;
     }
@@ -653,12 +708,19 @@ function parseDxfFlat(text) {
       else if (code === 20 && cur.inVertex && cur.v.length) cur.v[cur.v.length - 1].y = num;
     } else if (type === 'POINT') {
       if (code === 10) cur.x = num; else if (code === 20) cur.y = num;
-    } else if (type === 'CIRCLE') {
+    } else if (type === 'CIRCLE' || type === 'ARC') {
       if (code === 10) cur.cx = num; else if (code === 20) cur.cy = num; else if (code === 40) cur.r = num;
+      else if (code === 50) cur.a1 = num; else if (code === 51) cur.a2 = num;
+    } else if (type === '3DFACE') {
+      if (code >= 10 && code <= 13) cur['x' + (code - 10)] = num;
+      else if (code >= 20 && code <= 23) cur['y' + (code - 20)] = num;
+    } else if (type === 'TEXT' || type === 'MTEXT') {
+      if (code === 10) cur.x = num; else if (code === 20) cur.y = num; else if (code === 50) cur.r = num;
+      else if (code === 1) cur.t = raw[i + 1].replace(/\r/g, ''); else if (code === 3) cur.t3 = (cur.t3 || '') + raw[i + 1].replace(/\r/g, '');
     }
   }
   flush();
-  return { segs: new Float64Array(segs), pts: new Float64Array(pts) };
+  return { segs: new Float64Array(segs), pts: new Float64Array(pts), texts };
 }
 const WORKER_SRC = `${decodeText.toString()}\n${parseDxfFlat.toString()}\n
 onmessage = e => {
@@ -686,10 +748,13 @@ let dwgPtLL = null;      // Float64Array [lat,lon,...]
 let dwgLen = null;       // Float32Array 線分の長さ(度。東西は緯度で縮めた値)
 let dwgBounds = null;
 let dwgOrder = null;     // Uint32Array 長い順の並び
+let dwgTxtLL = [];       // [{lat,lon,t,r}] 図面の文字
+let lastSel = [];        // いま描いている線分の番号(距離を測るときの吸い付き先)
 let dwgShow = localStorage.getItem('kn.dwgShow') !== '0';
 const MAX_SEGS = 12000, MAX_DPTS = 400;
 function rebuildDrawingLL() {
-  if (!dwgRaw) { dwgLL = dwgPtLL = dwgLen = dwgOrder = null; dwgBounds = null; return; }
+  if (!dwgRaw) { dwgLL = dwgPtLL = dwgLen = dwgOrder = null; dwgBounds = null; dwgTxtLL = []; lastSel = []; return; }
+  dwgTxtLL = (dwgRaw.texts || []).map(t => { const a = xy2latlon(t.y, t.x, zoneNo()); return { lat: a.lat, lon: a.lon, t: t.t, r: t.r }; });
   const z = zoneNo(), s = dwgRaw.segs, n = s.length / 4;
   dwgLL = new Float64Array(n * 4); dwgLen = new Float32Array(n);
   let s0 = 90, n0 = -90, w0 = 180, e0 = -180;
@@ -713,7 +778,7 @@ function rebuildDrawingLL() {
   dwgOrder.sort((a, b) => dwgLen[b] - dwgLen[a]);
 }
 function refreshDrawing() {
-  dwgPtLayer.clearLayers();
+  dwgPtLayer.clearLayers(); dwgTextLayer.clearLayers(); lastSel = [];
   if (!dwgLL || !dwgShow) { dwgLayer.setLatLngs([]); return; }
   const b = map.getBounds().pad(0.25);
   const S = b.getSouth(), N = b.getNorth(), W = b.getWest(), E = b.getEast();
@@ -738,6 +803,18 @@ function refreshDrawing() {
     lines[j] = [[dwgLL[4 * k], dwgLL[4 * k + 1]], [dwgLL[4 * k + 2], dwgLL[4 * k + 3]]];
   }
   dwgLayer.setLatLngs(lines);
+  lastSel = sel;
+  // 図面の文字: 「🏷」が入で、拡大しているときだけ、見えている範囲の 250 個まで
+  let shownTxt = 0, txtInView = 0;
+  if (labelsOn && map.getZoom() >= 17) {
+    for (const t of dwgTxtLL) {
+      if (t.lat < S || t.lat > N || t.lon < W || t.lon > E) continue;
+      txtInView++;
+      if (shownTxt >= 250) continue;
+      L.marker([t.lat, t.lon], { icon: L.divIcon({ className: 'dtextWrap', html: `<div class="dtext" style="transform:rotate(${-t.r}deg)">${esc(t.t)}</div>`, iconSize: [0, 0], iconAnchor: [0, 0] }), interactive: false, keyboard: false }).addTo(dwgTextLayer);
+      shownTxt++;
+    }
+  }
   let shownPts = 0;
   for (let k = 0; k < dwgPtLL.length / 2 && shownPts < MAX_DPTS; k++) {
     const la = dwgPtLL[2 * k], lo = dwgPtLL[2 * k + 1];
@@ -746,7 +823,8 @@ function refreshDrawing() {
     shownPts++;
   }
   const total = n;
-  $('#dwgMsg').textContent = dwgRaw ? `${dwgRaw.name}: 線 ${total.toLocaleString()} 本のうち、いま ${sel.length.toLocaleString()} 本を表示${sel.length < idx.length ? '(縮小中のため短い線を省略。拡大すると出ます)' : ''}` : '';
+  const nTxt = dwgTxtLL.length;
+  $('#dwgMsg').textContent = dwgRaw ? `${dwgRaw.name}: 線 ${total.toLocaleString()} 本のうち、いま ${sel.length.toLocaleString()} 本を表示${sel.length < idx.length ? '(縮小中のため短い線を省略。拡大すると出ます)' : ''}${nTxt ? `。文字 ${nTxt.toLocaleString()} 個(🏷 が入で、拡大すると出ます)` : ''}` : '';
   $('#dwgMsg').className = 'msg good';
 }
 let refreshTimer = 0;
@@ -774,8 +852,8 @@ async function loadDxfFile(f) {
   const t0 = performance.now();
   try {
     const g = await parseInWorker(await readBuf(f));
-    if (!g.segs.length && !g.pts.length) throw new Error('線・ポリライン・円・点が見つかりません');
-    const d = { name: f.name, segs: g.segs, pts: g.pts };
+    if (!g.segs.length && !g.pts.length) throw new Error('線・ポリライン・円・円弧・面・点が見つかりません');
+    const d = { name: f.name, segs: g.segs, pts: g.pts, texts: g.texts || [] };
     setDrawing(d, true);
     dwgShow = true; localStorage.setItem('kn.dwgShow', '1'); $('#btnDwgShow').classList.add('on'); $('#btnDwgShow').textContent = '表示中';
     idbPut('dxf', d).catch(() => {});
@@ -960,7 +1038,7 @@ let navAz = null;
 function updateNav() {
   const p = points[selectedIdx];
   if (!p) { $('#navCard').hidden = true; navLine.setLatLngs([]); navAz = null; return; }
-  $('#navCard').hidden = false;
+  $('#navCard').hidden = measuring;
   $('#nName').textContent = p.name;
   const tll = xy2latlon(p.X, p.Y, zoneNo());
   const xy = correctedXY();
@@ -988,6 +1066,95 @@ function updateNavArrow() {
   }
 }
 $('#nClose').addEventListener('click', () => { selectedIdx = -1; savePoints(); drawPoints(); renderPoints(); updateNav(); });
+
+/* ---------- 点名・文字の表示非表示(🏷) ---------- */
+function renderLabelsBtn() { $('#btnLabels').classList.toggle('off', !labelsOn); $('#btnLabels').title = labelsOn ? '点名・文字を隠す' : '点名・文字を出す'; }
+$('#btnLabels').addEventListener('click', () => {
+  labelsOn = !labelsOn; localStorage.setItem('kn.labels', labelsOn ? '1' : '0');
+  renderLabelsBtn(); drawPoints(); refreshDrawing();
+});
+renderLabelsBtn();
+
+/* ---------- 点間距離を測る(📏) ----------
+   点を順に押す。押した所の近く(画面で 24 画素以内)に基準点・図面の点・図面の線の端があれば、そこに吸い付く。
+   距離は平面直角座標の水平距離。基準点どうし(高さあり)なら高低差と斜距離も出す */
+let measuring = false, measPts = [];
+const measLayer = L.layerGroup().addTo(map);
+function ptToMeas(i) { const p = points[i]; return { name: p.name, X: p.X, Y: p.Y, H: p.H, kind: '基準点' }; }
+function snapAt(latlng) {
+  const cp = map.latLngToContainerPoint(latlng);
+  let best = null, bd = 24;
+  const near = (lat, lon) => { const q = map.latLngToContainerPoint([lat, lon]); return Math.hypot(q.x - cp.x, q.y - cp.y); };
+  points.forEach((p, i) => { const a = xy2latlon(p.X, p.Y, zoneNo()); const d = near(a.lat, a.lon); if (d < bd) { bd = d; best = ptToMeas(i); } });
+  if (best) return best; // 基準点を最優先
+  if (dwgRaw && dwgShow) {
+    for (const k of lastSel) {
+      for (const e of [0, 1]) {
+        const d = near(dwgLL[4 * k + 2 * e], dwgLL[4 * k + 2 * e + 1]);
+        if (d < bd) { bd = d; best = { name: '図面の角', X: dwgRaw.segs[4 * k + 2 * e + 1], Y: dwgRaw.segs[4 * k + 2 * e], H: null, kind: '図面' }; }
+      }
+    }
+    for (let k = 0; k < dwgPtLL.length / 2; k++) {
+      const d = near(dwgPtLL[2 * k], dwgPtLL[2 * k + 1]);
+      if (d < bd) { bd = d; best = { name: '図面の点', X: dwgRaw.pts[2 * k + 1], Y: dwgRaw.pts[2 * k], H: null, kind: '図面' }; }
+    }
+  }
+  if (best) return best;
+  const xy = latlon2xy(latlng.lat, latlng.lng, zoneNo());
+  return { name: '指定した所', X: xy.X, Y: xy.Y, H: null, kind: '指定' };
+}
+const fmtAz = deg => { const D = Math.floor(deg), Mf = (deg - D) * 60, M = Math.floor(Mf), S = Math.round((Mf - M) * 60); return `${D}°${String(M).padStart(2, '0')}′${String(S).padStart(2, '0')}″`; };
+function addMeasurePoint(q) {
+  const last = measPts[measPts.length - 1];
+  if (last && Math.abs(last.X - q.X) < 1e-4 && Math.abs(last.Y - q.Y) < 1e-4) return; // 同じ点を続けて押したときは足さない
+  measPts.push(q); renderMeasure();
+}
+function renderMeasure() {
+  measLayer.clearLayers();
+  const z = zoneNo();
+  const ll = measPts.map(q => { const a = xy2latlon(q.X, q.Y, z); return [a.lat, a.lon]; });
+  if (ll.length > 1) L.polyline(ll, { renderer: canvasR, color: '#a61e4d', weight: 3, interactive: false }).addTo(measLayer);
+  ll.forEach((a, k) => {
+    L.circleMarker(a, { renderer: canvasR, radius: 6, color: '#fff', weight: 2, fillColor: '#a61e4d', fillOpacity: 1, interactive: false }).addTo(measLayer);
+    L.marker(a, { icon: L.divIcon({ className: '', html: `<span class="mptlabel">${k + 1}</span>`, iconSize: [0, 0] }), interactive: false, keyboard: false }).addTo(measLayer);
+  });
+  let total = 0;
+  for (let k = 1; k < measPts.length; k++) {
+    const a = measPts[k - 1], b = measPts[k];
+    const d = Math.hypot(b.X - a.X, b.Y - a.Y); total += d;
+    const mid = [(ll[k - 1][0] + ll[k][0]) / 2, (ll[k - 1][1] + ll[k][1]) / 2];
+    L.marker(mid, { icon: L.divIcon({ className: '', html: `<span class="mlabel">${d.toFixed(3)} m</span>`, iconSize: [0, 0] }), interactive: false, keyboard: false }).addTo(measLayer);
+  }
+  const body = $('#mBody');
+  if (!measPts.length) { body.innerHTML = '点を順に押してください。基準点・図面の点や線の端の近くを押すと、そこに吸い付きます。'; return; }
+  if (measPts.length === 1) { const a = measPts[0]; body.innerHTML = `1. ${esc(a.name)}(X ${a.X.toFixed(3)} / Y ${a.Y.toFixed(3)})<br><span class="sub">次の点を押してください</span>`; return; }
+  const a = measPts[measPts.length - 2], b = measPts[measPts.length - 1];
+  const d = Math.hypot(b.X - a.X, b.Y - a.Y);
+  let h = `${measPts.length - 1}. ${esc(a.name)} → ${measPts.length}. ${esc(b.name)}<br><span class="big">${d.toFixed(3)} m</span> <span class="sub">水平距離・方向角 ${fmtAz(bearingDeg(a, b))}</span>`;
+  if (Number.isFinite(a.H) && Number.isFinite(b.H) && a.H !== null && b.H !== null) {
+    const dh = b.H - a.H;
+    h += `<br><span class="sub">高低差 ${dh >= 0 ? '+' : ''}${dh.toFixed(3)} m・斜距離 ${Math.hypot(d, dh).toFixed(3)} m</span>`;
+  }
+  if (measPts.length > 2) h += `<br><span class="sub">合計(${measPts.length - 1} 区間) </span><b>${total.toFixed(3)} m</b>`;
+  body.innerHTML = h;
+}
+function setMeasuring(on) {
+  measuring = on;
+  $('#btnMeasure').classList.toggle('on', on);
+  $('#measCard').hidden = !on;
+  if (on) { follow = false; $('#btnHere').classList.remove('on'); $('#navCard').hidden = true; showSheet(null); renderMeasure(); }
+  else { measPts = []; measLayer.clearLayers(); updateNav(); }
+}
+$('#btnMeasure').addEventListener('click', () => setMeasuring(!measuring));
+$('#mEnd').addEventListener('click', () => setMeasuring(false));
+$('#mUndo').addEventListener('click', () => { measPts.pop(); renderMeasure(); });
+$('#mClear').addEventListener('click', () => { measPts = []; renderMeasure(); });
+$('#mHere').addEventListener('click', () => {
+  const xy = correctedXY();
+  if (!xy) { $('#mBody').innerHTML = '現在地がまだ取れていません。'; return; }
+  addMeasurePoint({ name: '現在地', X: xy.X, Y: xy.Y, H: null, kind: '現在地' });
+});
+map.on('click', e => { if (measuring) addMeasurePoint(snapAt(e.latlng)); });
 
 /* ---------- 右下のカメラ: 後ろのカメラの映像に、目的の点への矢印と距離を重ねる(試験中) ---------- */
 let camStream = null;
