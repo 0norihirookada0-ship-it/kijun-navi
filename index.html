@@ -74,6 +74,7 @@ button{font:inherit;color:inherit}
 .mlabel{background:#a61e4d;color:#fff;font-weight:700;font-size:12px;padding:1px 6px;border-radius:9px;white-space:nowrap;transform:translate(-50%,-50%);display:inline-block}
 .mptlabel{background:#fff;color:#a61e4d;border:1px solid #a61e4d;font-weight:700;font-size:11px;padding:0 5px;border-radius:8px;white-space:nowrap;display:inline-block;transform:translate(8px,-50%)}
 /* 図面の文字 */
+.fracdpr .leaflet-tile-container img.leaflet-tile{mix-blend-mode:plus-lighter}
 .dtext{color:#1f2d3d;font-size:11px;font-weight:700;white-space:nowrap;transform-origin:0 100%;text-shadow:0 0 2px #fff,0 0 2px #fff;position:absolute;bottom:0;left:0;pointer-events:none}
 /* 下: ボタンの帯 */
 #bar{position:fixed;left:0;right:0;bottom:0;z-index:1000;height:calc(var(--barH) + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);
@@ -344,7 +345,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </div>
   </div>
   <button id="opSkip" type="button">とばす</button>
-  <div id="opFoot">v0.4.3 試験中 ・ 株式会社ネクサス</div>
+  <div id="opFoot">v0.4.4 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
@@ -392,7 +393,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.3 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.4 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <div class="sp-cat"><img class="catHead" src="img/cat_head.png" alt="" style="width:64px;height:64px"><span id="spCatMsg">準備しています…</span></div>
   <ul class="sp-list">
@@ -582,8 +583,8 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.4.3(2026-11-24)試験中';
-window.__knVer = 'v0.4.3';
+const VERSION = 'v0.4.4(2026-11-24)試験中';
+window.__knVer = 'v0.4.4';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -671,7 +672,11 @@ function xy2latlon(X, Y, zoneNo) {
 /* ---------- 地図 ---------- */
 const GSI_ATTR = '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>';
 const isTouch = matchMedia('(pointer:coarse)').matches;
-const map = L.map('map', { zoomControl: !isTouch, attributionControl: true, preferCanvas: true, maxZoom: 21 })
+// 画面の細かさ(devicePixelRatio)が 2.625 などの半端な Android では、地図の画像の位置が画素の途中に来て、つなぎ目に白い線が出る。
+// その機種だけ、画像を「足し合わせ」(plus-lighter)で重ね、つなぎ目の半端な画素を隣の画像と足して埋める。
+// 段(拡大の段階)ごとの入れ物の中だけで足すので、拡大の切り替えで明るくはならない。画像を大きく置く方法は、明るい線が出たのでやめた
+if (Math.abs((window.devicePixelRatio || 1) - Math.round(window.devicePixelRatio || 1)) > 0.01) document.documentElement.classList.add('fracdpr');
+const map = L.map('map', { zoomControl: !isTouch, attributionControl: true, preferCanvas: true, maxZoom: 23 })
   .setView([34.685, 135.805], 15); // 既定: 奈良県庁付近(データも現在地も無いとき)
 if (!isTouch) map.zoomControl.setPosition('bottomleft');
 window.__kn = { map, startGeo }; // 試験用(動作確認で地図を動かす・位置を測り直すため)
@@ -698,7 +703,7 @@ function maybeAutoClose() {
 $('#spGo').addEventListener('click', () => { if (needsOriPermission && spState.ori !== 'ok') askCompass(); closeSplash(); });
 setTimeout(() => { if (!splashClosed && spState.geo === 'wait') $('#spGo').textContent = '地図へ進む(位置は測り続けます)'; }, 10000);
 const canvasR = L.canvas({ padding: 0.3 });
-const tileOpt = { attribution: GSI_ATTR, maxNativeZoom: 18, maxZoom: 21, crossOrigin: true, keepBuffer: 1, updateWhenIdle: true };
+const tileOpt = { attribution: GSI_ATTR, maxNativeZoom: 18, maxZoom: 23, crossOrigin: true, keepBuffer: 1, updateWhenIdle: true };
 const BASES = {
   std: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', tileOpt),
   pale: L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', tileOpt),
