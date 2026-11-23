@@ -346,7 +346,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </div>
   </div>
   <button id="opSkip" type="button">とばす</button>
-  <div id="opFoot">v0.4.10 試験中 ・ 株式会社ネクサス</div>
+  <div id="opFoot">v0.4.11 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
@@ -394,7 +394,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.10 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.11 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <div class="sp-cat"><img class="catHead" src="img/cat_head.png" alt="" style="width:64px;height:64px"><span id="spCatMsg">準備しています…</span></div>
   <ul class="sp-list">
@@ -494,6 +494,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       <ol><li>LINE のトークでファイルを押して開く</li><li>共有のボタン(四角から上向きの矢印)→「"ファイル"に保存」→「この iPhone 内」→「保存」</li><li>ここに戻って選ぶボタン →「ブラウズ」→「この iPhone 内」から選ぶ</li></ol>
       <b>Android</b>
       <ol><li>LINE のトークでファイルを<b>長押し</b>→「保存」(「ダウンロード」に入ります)。押して出る「ビューワーを起動」で「スプレッドシート」を選ぶと、Google のスプレッドシートに変わって読めなくなります</li><li>ここに戻って選ぶボタン →「ダウンロード」から選ぶ</li></ol>
+      <p>選ぶボタンで「カメラ」「写真と動画」しか出ないとき(Galaxy の「インターネット」): 右下の「≡」か「⋮」→「他のアプリで開く」→「Chrome」で開き直してから選びます。基準点は、事務所から届く LINE のリンクを押すだけでも入ります。</p>
     </details>
     <details class="fhelp" id="pasteBox"><summary>📋 貼り付けで読む(スプレッドシート・メモから)</summary>
       <ol><li>LINE で点の CSV を押す →「スプレッドシート」で開く(表が出ます)</li><li>表の左上の角(A の左・1 の上)を押して全部を選ぶ → もう一度押して「コピー」</li><li>ここに戻って下の「📋 コピーした表を読む」</li></ol>
@@ -540,6 +541,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       <ol><li>LINE のトークでファイルを押して開く</li><li>共有のボタン(四角から上向きの矢印)→「"ファイル"に保存」→「この iPhone 内」→「保存」</li><li>ここに戻って選ぶボタン →「ブラウズ」→「この iPhone 内」から選ぶ</li></ol>
       <b>Android</b>
       <ol><li>LINE のトークでファイルを<b>長押し</b>→「保存」(「ダウンロード」に入ります)。押して出る「ビューワーを起動」で「スプレッドシート」を選ぶと、Google のスプレッドシートに変わって読めなくなります</li><li>ここに戻って選ぶボタン →「ダウンロード」から選ぶ</li></ol>
+      <p>選ぶボタンで「カメラ」「写真と動画」しか出ないとき(Galaxy の「インターネット」): 右下の「≡」か「⋮」→「他のアプリで開く」→「Chrome」で開き直してから選びます。基準点は、事務所から届く LINE のリンクを押すだけでも入ります。</p>
     </details>
     <p id="dwgMsg" class="msg"></p>
     <p class="note">線・ポリライン・円・円弧・点・設計面の三角形(3DFACE)と文字を地図に重ねます(ハッチ・ブロックは出しません)。文字は右の 🏷 が入で、拡大したときに出ます。軽くするため、見えている範囲だけを描き、縮小しているときは短い線を省きます。図面は端末に残り、次に開いたときは地図が出たあとで読み出します。</p>
@@ -597,8 +599,8 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.4.10(2026-11-24)試験中';
-window.__knVer = 'v0.4.10';
+const VERSION = 'v0.4.11(2026-11-24)試験中';
+window.__knVer = 'v0.4.11';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -615,6 +617,12 @@ if (isLineApp) {
     location.replace(u.toString());
   }
   $('#lineWarn').hidden = false;
+}
+// Galaxy の「インターネット」は、しぼり込みの無い選ぶボタンでカメラ・写真しか出さない。文書の種類を並べて「マイファイル」を出す
+const isSamsung = /SamsungBrowser/i.test(navigator.userAgent);
+if (isSamsung) {
+  const acc = '.csv,.sim,.sima,.txt,.dxf,text/plain,text/csv,text/comma-separated-values,application/dxf,image/vnd.dxf,application/octet-stream';
+  document.querySelectorAll('#fPts,#fDxf').forEach(i => i.setAttribute('accept', acc));
 }
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
