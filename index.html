@@ -109,6 +109,10 @@ tr.pt{cursor:pointer}
 #toast{position:fixed;left:50%;top:38%;transform:translateX(-50%);z-index:3000;background:rgba(23,50,78,.94);color:#fff;font-weight:800;font-size:18px;line-height:1.4;padding:14px 18px;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);text-align:center;max-width:88vw;pointer-events:none;white-space:pre-line}
 .fhelp summary{font-weight:700;cursor:pointer;color:#6b4a00}
 .fhelp p{margin:4px 0}.fhelp ol{margin:2px 0 6px;padding-left:1.3em}
+.layerRow{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #eee}
+.layerRow .lname{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.layerRow input[type=color]{width:2.3em;height:2.3em;padding:0;border:1px solid var(--line);border-radius:6px;background:none}
+.layerRow .btn{padding:6px 10px;min-height:38px;min-width:2.4em}
 .ver{font-size:11.5px;color:var(--muted);text-align:right;margin:4px 0 0}
 /* 地図の上の印 */
 .ptTri{width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:16px solid var(--accent);filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1px #000)}
@@ -549,6 +553,11 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     </details>
     <p id="dwgMsg" class="msg"></p>
     <p class="note">線・ポリライン・円・円弧・点・設計面の三角形(3DFACE)と文字を地図に重ねます(ハッチ・ブロックは出しません)。文字は右の 🏷 が入で、拡大したときに出ます。軽くするため、見えている範囲だけを描き、縮小しているときは短い線を省きます。図面は端末に残り、次に開いたときは地図が出たあとで読み出します。</p>
+    <details class="fhelp" id="layerBox" hidden><summary>🧩 レイヤー(表示・色・太さ)</summary>
+      <p class="note">図面の中のレイヤーごとに、表示・非表示と、線の色・太さを変えられます。「作業道」「等高線」のような名前は自動で見やすくしています(作業道=太いオレンジ・等高線=細い薄灰)。色・太さは次に同じ名前のレイヤーを読んだときも覚えています。</p>
+      <div id="layerList"></div>
+      <div class="row"><button class="btn" id="btnLayerReset" type="button">自動の色・太さに戻す</button></div>
+    </details>
   </section>
 </div>
 
@@ -968,14 +977,21 @@ function parseDxfFlat(text) {
   // LINE・LWPOLYLINE・POLYLINE+VERTEX・POINT・CIRCLE・ARC・3DFACE を、線分 [x1,y1,x2,y2,...] と点 [x,y,...] の平らな配列で返す。
   // TEXT・MTEXT は文字の一覧 [{x,y,t,r}] で返す。3DFACE(設計面の三角形)は、隣どうしで重なる辺を 1 本にまとめる
   const raw = text.replace(/\r+\n/g, '\n').split(/\n|\r/); // 二重の改行(\r\r\n)にも耐える
-  const segs = [], pts = [], texts = [];
+  const segs = [], pts = [], texts = [], segLayer = [], ptLayer = [];
+  const layerNames = [], layerMap = new Map();
+  const li = name => { // レイヤー名→番号(初めての名前なら足す。無名は既定の"0")
+    name = name || '0';
+    let i = layerMap.get(name);
+    if (i === undefined) { i = layerNames.length; layerNames.push(name); layerMap.set(name, i); }
+    return i;
+  };
   const faceSeen = new Set();
-  const addEdge = (ax, ay, bx, by) => {
+  const addEdge = (ax, ay, bx, by, layIdx) => {
     if (ax === bx && ay === by) return;
     const k1 = ax.toFixed(3) + ',' + ay.toFixed(3), k2 = bx.toFixed(3) + ',' + by.toFixed(3);
     const key = k1 < k2 ? k1 + '|' + k2 : k2 + '|' + k1;
     if (faceSeen.has(key)) return;
-    faceSeen.add(key); segs.push(ax, ay, bx, by);
+    faceSeen.add(key); segs.push(ax, ay, bx, by); segLayer.push(layIdx);
   };
   const cleanMtext = t => t.replace(/\\P/g, ' ').replace(/\\[A-Za-z][^;\\{}]*;/g, '').replace(/\\[~ ]/g, ' ').replace(/[{}]/g, '').trim();
   let i = 0;
@@ -984,12 +1000,13 @@ function parseDxfFlat(text) {
   let type = null, cur = null;
   const flush = () => {
     if (!type || !cur) { type = null; cur = null; return; }
-    if (type === 'LINE') { if ([cur.x1, cur.y1, cur.x2, cur.y2].every(Number.isFinite)) segs.push(cur.x1, cur.y1, cur.x2, cur.y2); }
+    const lay = li(cur.layer);
+    if (type === 'LINE') { if ([cur.x1, cur.y1, cur.x2, cur.y2].every(Number.isFinite)) { segs.push(cur.x1, cur.y1, cur.x2, cur.y2); segLayer.push(lay); } }
     else if (type === 'LWPOLYLINE' || type === 'POLYLINE') {
       const v = cur.v.filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
-      for (let k = 0; k + 1 < v.length; k++) segs.push(v[k].x, v[k].y, v[k + 1].x, v[k + 1].y);
-      if (cur.closed && v.length > 2) segs.push(v[v.length - 1].x, v[v.length - 1].y, v[0].x, v[0].y);
-    } else if (type === 'POINT') { if (Number.isFinite(cur.x) && Number.isFinite(cur.y)) pts.push(cur.x, cur.y); }
+      for (let k = 0; k + 1 < v.length; k++) { segs.push(v[k].x, v[k].y, v[k + 1].x, v[k + 1].y); segLayer.push(lay); }
+      if (cur.closed && v.length > 2) { segs.push(v[v.length - 1].x, v[v.length - 1].y, v[0].x, v[0].y); segLayer.push(lay); }
+    } else if (type === 'POINT') { if (Number.isFinite(cur.x) && Number.isFinite(cur.y)) { pts.push(cur.x, cur.y); ptLayer.push(lay); } }
     else if (type === 'ARC') {
       if (Number.isFinite(cur.cx) && Number.isFinite(cur.cy) && cur.r > 0) {
         const a0 = (cur.a1 || 0) * Math.PI / 180;
@@ -998,6 +1015,7 @@ function parseDxfFlat(text) {
         for (let k = 0; k < n; k++) {
           const a1 = a0 + da * k, a2 = a0 + da * (k + 1);
           segs.push(cur.cx + cur.r * Math.cos(a1), cur.cy + cur.r * Math.sin(a1), cur.cx + cur.r * Math.cos(a2), cur.cy + cur.r * Math.sin(a2));
+          segLayer.push(lay);
         }
       }
     } else if (type === '3DFACE') {
@@ -1005,11 +1023,11 @@ function parseDxfFlat(text) {
       if (P.slice(0, 3).every(q => Number.isFinite(q[0]) && Number.isFinite(q[1]))) {
         const tri = !Number.isFinite(P[3][0]) || (P[3][0] === P[2][0] && P[3][1] === P[2][1]);
         const ring = tri ? [P[0], P[1], P[2]] : P;
-        for (let k = 0; k < ring.length; k++) { const a = ring[k], b = ring[(k + 1) % ring.length]; addEdge(a[0], a[1], b[0], b[1]); }
+        for (let k = 0; k < ring.length; k++) { const a = ring[k], b = ring[(k + 1) % ring.length]; addEdge(a[0], a[1], b[0], b[1], lay); }
       }
     } else if (type === 'TEXT' || type === 'MTEXT') {
       const t = type === 'MTEXT' ? cleanMtext((cur.t3 || '') + (cur.t || '')) : (cur.t || '').trim();
-      if (t && Number.isFinite(cur.x) && Number.isFinite(cur.y)) texts.push({ x: cur.x, y: cur.y, t: t.slice(0, 60), r: cur.r || 0 });
+      if (t && Number.isFinite(cur.x) && Number.isFinite(cur.y)) texts.push({ x: cur.x, y: cur.y, t: t.slice(0, 60), r: cur.r || 0, layer: lay });
     }
     else if (type === 'CIRCLE') {
       if (Number.isFinite(cur.cx) && Number.isFinite(cur.cy) && cur.r > 0) {
@@ -1017,6 +1035,7 @@ function parseDxfFlat(text) {
         for (let k = 0; k < n; k++) {
           const a1 = 2 * Math.PI * k / n, a2 = 2 * Math.PI * (k + 1) / n;
           segs.push(cur.cx + cur.r * Math.cos(a1), cur.cy + cur.r * Math.sin(a1), cur.cx + cur.r * Math.cos(a2), cur.cy + cur.r * Math.sin(a2));
+          segLayer.push(lay);
         }
       }
     }
@@ -1034,6 +1053,7 @@ function parseDxfFlat(text) {
       continue;
     }
     if (!type) continue;
+    if (code === 8) { cur.layer = val; continue; } // レイヤー名(どの entity 種類でも共通)
     const num = parseFloat(val);
     if (type === 'LINE') {
       if (code === 10) cur.x1 = num; else if (code === 20) cur.y1 = num; else if (code === 11) cur.x2 = num; else if (code === 21) cur.y2 = num;
@@ -1059,11 +1079,11 @@ function parseDxfFlat(text) {
     }
   }
   flush();
-  return { segs: new Float64Array(segs), pts: new Float64Array(pts), texts };
+  return { segs: new Float64Array(segs), pts: new Float64Array(pts), texts, segLayer: new Uint16Array(segLayer), ptLayer: new Uint16Array(ptLayer), layers: layerNames };
 }
 const WORKER_SRC = `${decodeText.toString()}\n${parseDxfFlat.toString()}\n
 onmessage = e => {
-  try { const g = parseDxfFlat(decodeText(e.data)); postMessage(g, [g.segs.buffer, g.pts.buffer]); }
+  try { const g = parseDxfFlat(decodeText(e.data)); postMessage(g, [g.segs.buffer, g.pts.buffer, g.segLayer.buffer, g.ptLayer.buffer]); }
   catch (err) { postMessage({ error: String(err && err.message || err) }); }
 };`;
 function parseInWorker(buf) {
@@ -1111,7 +1131,7 @@ function buildDrawingLL(segs, pts, texts, z) {
     ptLL[2 * k] = a.lat; ptLL[2 * k + 1] = a.lon; ptMerc[2 * k] = mx(a.lon); ptMerc[2 * k + 1] = my(a.lat);
     if (a.lat < s0) s0 = a.lat; if (a.lat > n0) n0 = a.lat; if (a.lon < w0) w0 = a.lon; if (a.lon > e0) e0 = a.lon;
   }
-  const txt = (texts || []).map(t => { const a = xy2latlon(t.y, t.x, z); return { lat: a.lat, lon: a.lon, mx: mx(a.lon), my: my(a.lat), t: t.t, r: t.r }; });
+  const txt = (texts || []).map(t => { const a = xy2latlon(t.y, t.x, z); return { lat: a.lat, lon: a.lon, mx: mx(a.lon), my: my(a.lat), t: t.t, r: t.r, layer: t.layer }; });
   const order = new Uint32Array(n);
   for (let k = 0; k < n; k++) order[k] = k;
   order.sort((a, b) => len[b] - len[a]);
@@ -1152,24 +1172,43 @@ function refreshDrawing() {
   // 長い線から順に見て、描く範囲に入る線を上限まで拾う。画面で 1 画素より短くなったら、そこから先は全部短いので打ち切る
   // (境界・道路などの長い線が先に残り、細かい線は拡大すると出てくる)
   const n = dwgLen.length, minLen = 360 / scale * Math.cos(map.getCenter().lat * Math.PI / 180); // 1 画素の長さ(度)
+  const segLayer = dwgRaw && dwgRaw.segLayer;
+  const layerHidden = li => li !== undefined && li >= 0 && dwgLayers[li] && !dwgLayers[li].visible;
   const sel = [];
   let cut = false;
-  ctx.beginPath();
   for (let j = 0; j < n; j++) {
     const k = dwgOrder[j];
     if (dwgLen[k] < minLen) { cut = true; break; }
+    if (segLayer && layerHidden(segLayer[k])) continue; // 隠したレイヤーは枠外と同じく数えない
     const x1 = dwgMerc[4 * k] * scale - ox, y1 = dwgMerc[4 * k + 1] * scale - oy, x2 = dwgMerc[4 * k + 2] * scale - ox, y2 = dwgMerc[4 * k + 3] * scale - oy;
     if ((x1 < 0 && x2 < 0) || (x1 > w && x2 > w) || (y1 < 0 && y2 < 0) || (y1 > h && y2 > h)) continue;
     if (sel.length >= MAX_SEGS) { cut = true; break; }
-    sel.push(k); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+    sel.push(k);
   }
-  ctx.strokeStyle = dwgColor; ctx.globalAlpha = 0.9; ctx.lineWidth = 1.3; ctx.lineCap = 'round'; ctx.stroke();
+  // レイヤーごとに分けて描く(色・太さを変えるため、ひとまとめの線ではなくレイヤー単位で path を作る)
+  const byLayer = new Map();
+  for (const k of sel) {
+    const li = segLayer ? segLayer[k] : -1;
+    if (!byLayer.has(li)) byLayer.set(li, []);
+    byLayer.get(li).push(k);
+  }
+  for (const [li, ks] of byLayer) {
+    const st = (li >= 0 && dwgLayers[li]) || null;
+    ctx.beginPath();
+    for (const k of ks) {
+      ctx.moveTo(dwgMerc[4 * k] * scale - ox, dwgMerc[4 * k + 1] * scale - oy);
+      ctx.lineTo(dwgMerc[4 * k + 2] * scale - ox, dwgMerc[4 * k + 3] * scale - oy);
+    }
+    ctx.strokeStyle = (st && st.color) || dwgColor; ctx.globalAlpha = (st && st.alpha) ?? 0.9; ctx.lineWidth = (st && st.width) || 1.3; ctx.lineCap = 'round'; ctx.stroke();
+  }
   ctx.globalAlpha = 1;
   lastSel = sel;
   // 図面の点(400 個まで)
+  const ptLayer = dwgRaw && dwgRaw.ptLayer;
   ctx.beginPath();
   let shownPts = 0;
   for (let k = 0; k < dwgPtMerc.length / 2 && shownPts < MAX_DPTS; k++) {
+    if (ptLayer && layerHidden(ptLayer[k])) continue;
     const x = dwgPtMerc[2 * k] * scale - ox, y = dwgPtMerc[2 * k + 1] * scale - oy;
     if (x < 0 || x > w || y < 0 || y > h) continue;
     ctx.moveTo(x + 2, y); ctx.arc(x, y, 2, 0, Math.PI * 2); shownPts++;
@@ -1181,6 +1220,7 @@ function refreshDrawing() {
     ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.fillStyle = '#1f2d3d';
     let shownTxt = 0;
     for (const t of dwgTxtLL) {
+      if (layerHidden(t.layer)) continue;
       const x = t.mx * scale - ox, y = t.my * scale - oy;
       if (x < -50 || x > w || y < 0 || y > h + 20) continue;
       ctx.save(); ctx.translate(x, y); if (t.r) ctx.rotate(-t.r * Math.PI / 180);
@@ -1210,8 +1250,53 @@ async function idbPut(key, val) { const db = await idb(); return new Promise((re
 async function idbGet(key) { const db = await idb(); return new Promise((res, rej) => { const r = db.transaction('kv').objectStore('kv').get(key); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
 async function idbDel(key) { const db = await idb(); return new Promise(res => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').delete(key); t.oncomplete = res; t.onerror = res; }); }
 
+/* ---------- レイヤー(表示・色・太さ)。名前ごとに localStorage へ覚える ---------- */
+const LAYER_KEY = n => 'kn.layer.' + n;
+function defaultLayerStyle(name) {
+  if (/作業道|路網|^道路?$|road|path/i.test(name || '')) return { visible: true, color: '#ff6a00', width: 3, alpha: 0.95 };
+  if (/等高線|等高|contour|kontonr/i.test(name || '')) return { visible: true, color: '#b9c2cc', width: 0.8, alpha: 0.7 };
+  return { visible: true, color: dwgColor, width: 1.3, alpha: 0.9 };
+}
+function loadLayerStyle(name) {
+  try { const s = localStorage.getItem(LAYER_KEY(name)); if (s) return JSON.parse(s); } catch { /* 壊れた保存は無視 */ }
+  return null;
+}
+function saveLayerStyle(name, st) { try { localStorage.setItem(LAYER_KEY(name), JSON.stringify(st)); } catch { /* 容量不足などは諦める */ } }
+let dwgLayers = []; // [{name,visible,color,width,alpha}] dwgRaw.layers と同じ並び
+function rebuildLayerState() {
+  const names = (dwgRaw && dwgRaw.layers) || [];
+  dwgLayers = names.map(name => Object.assign({ name }, loadLayerStyle(name) || defaultLayerStyle(name)));
+}
+const WIDTH_STEPS = [0.8, 1.3, 2, 3, 4.5];
+function widthLabel(w) { return w <= 0.8 ? '細' : w <= 1.3 ? '中' : w <= 2 ? '中太' : w <= 3 ? '太' : '極太'; }
+function renderLayerPanel() {
+  const box = $('#layerBox'), list = $('#layerList');
+  if (!dwgLayers.length) { box.hidden = true; list.textContent = ''; return; }
+  box.hidden = false; list.textContent = '';
+  dwgLayers.forEach((L, idx) => {
+    const row = document.createElement('div'); row.className = 'layerRow';
+    const vis = document.createElement('button'); vis.type = 'button'; vis.className = 'btn' + (L.visible ? ' on' : ''); vis.textContent = L.visible ? '👁' : '🚫';
+    vis.addEventListener('click', () => { L.visible = !L.visible; saveLayerStyle(L.name, L); renderLayerPanel(); refreshDrawing(); });
+    const name = document.createElement('span'); name.className = 'lname'; name.textContent = L.name; name.title = L.name;
+    const color = document.createElement('input'); color.type = 'color'; color.value = L.color;
+    color.addEventListener('input', () => { L.color = color.value; saveLayerStyle(L.name, L); refreshDrawing(); });
+    const width = document.createElement('button'); width.type = 'button'; width.className = 'btn'; width.textContent = widthLabel(L.width);
+    width.addEventListener('click', () => {
+      const i = WIDTH_STEPS.indexOf(L.width);
+      L.width = WIDTH_STEPS[(i < 0 ? 0 : i + 1) % WIDTH_STEPS.length];
+      width.textContent = widthLabel(L.width); saveLayerStyle(L.name, L); refreshDrawing();
+    });
+    row.append(vis, name, color, width); list.appendChild(row);
+  });
+}
+$('#btnLayerReset').addEventListener('click', () => {
+  dwgLayers.forEach(L => { try { localStorage.removeItem(LAYER_KEY(L.name)); } catch { /* 無視 */ } Object.assign(L, defaultLayerStyle(L.name)); });
+  renderLayerPanel(); refreshDrawing();
+});
+
 async function setDrawing(d, fit) {
   dwgRaw = d; updateEmpty();
+  rebuildLayerState(); renderLayerPanel();
   if (d) msg('#dwgMsg', `${d.name} を地図に合わせています…(地図はそのまま使えます)`, '');
   await rebuildDrawingLL(); refreshDrawing();
   if (fit && dwgBounds) map.fitBounds(dwgBounds, fitPad(19));
@@ -1223,7 +1308,7 @@ async function loadDxfFile(f) {
   try {
     const g = await parseInWorker(await readBuf(f));
     if (!g.segs.length && !g.pts.length) throw new Error('線・ポリライン・円・円弧・面・点が見つかりません');
-    const d = { name: f.name, segs: g.segs, pts: g.pts, texts: g.texts || [] };
+    const d = { name: f.name, segs: g.segs, pts: g.pts, texts: g.texts || [], segLayer: g.segLayer, ptLayer: g.ptLayer, layers: g.layers || [] };
     await setDrawing(d, true);
     dwgShow = true; localStorage.setItem('kn.dwgShow', '1'); $('#btnDwgShow').classList.add('on'); $('#btnDwgShow').textContent = '表示中';
     idbPut('dxf', d).catch(() => {});
