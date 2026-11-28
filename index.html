@@ -246,6 +246,21 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 #tutCard button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:9px 14px;font-weight:800;font-size:14px}
 #tutCard button.primary{background:var(--accent);border-color:var(--accent);color:#1d1500}
 @media (prefers-reduced-motion:reduce){#tutCard img{animation:none}#tutHole{transition:none}}
+#home{position:fixed;inset:0;z-index:1500;background:rgba(10,20,30,.62);display:flex;align-items:center;justify-content:center;padding:12px}
+#home[hidden]{display:none}
+#homeCard{background:#fff;color:#17324e;border-radius:16px;padding:12px;max-width:480px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+#homeCard .tc-row{display:flex;gap:10px;align-items:flex-start}
+#homeCard img{width:64px;height:64px;flex:none;animation:catHop .7s ease-in-out infinite alternate}
+#homeCard p{margin:2px 0 0;font-size:16px;font-weight:800;line-height:1.55}
+#homeCard small{display:block;margin-top:4px;font-size:13px;color:#3d4c5c;line-height:1.55}
+#homeCard ol{margin:10px 0 0;padding-left:1.6em;font-size:15px;line-height:1.7}
+#homeCard ol li{margin-bottom:6px}
+#homeCard .hk{display:inline-block;border:1px solid #9aa7b4;border-radius:6px;padding:0 6px;background:#f3f6f9;font-weight:800;white-space:nowrap}
+#homeCard .tc-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+#homeCard button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:9px 14px;font-weight:800;font-size:14px}
+#homeCard button.primary{background:var(--accent);border-color:var(--accent);color:#1d1500;font-size:16px}
+#homeCard #homeNever{margin-left:auto;font-size:12px;font-weight:400;border:0;background:none;text-decoration:underline;color:#566474}
+@media (prefers-reduced-motion:reduce){#homeCard img{animation:none}}
 /* カメラ */
 #cam{position:fixed;inset:0;z-index:1200;background:#000}
 #cam video{width:100%;height:100%;object-fit:cover}
@@ -358,7 +373,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </div>
   </div>
   <button id="opSkip" type="button">とばす</button>
-  <div id="opFoot">v0.4.17 試験中 ・ 株式会社ネクサス</div>
+  <div id="opFoot">v0.4.18 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
@@ -406,7 +421,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.17 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.18 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <div class="sp-cat"><img class="catHead" src="img/cat_head.png" alt="" style="width:64px;height:64px"><span id="spCatMsg">準備しています…</span></div>
   <ul class="sp-list">
@@ -539,7 +554,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
     </div>
     <table id="calTable"><thead><tr><th>点名</th><th>水平のずれ</th><th></th></tr></thead><tbody></tbody></table>
     <p id="calMsg" class="msg"></p>
-    <div class="row"><button class="btn" id="btnTut" type="button">🐾 チュートリアルをもう一度</button><a class="btn" href="tsukaikata.pdf" target="_blank" rel="noopener">📖 かんたん使い方</a><a class="btn" href="tsukaikata_kuwashii.pdf" target="_blank" rel="noopener">くわしい使い方</a></div>
+    <div class="row"><button class="btn" id="btnTut" type="button">🐾 チュートリアルをもう一度</button><button class="btn" id="btnHome" type="button">📲 ホーム画面に追加のしかた</button><a class="btn" href="tsukaikata.pdf" target="_blank" rel="noopener">📖 かんたん使い方</a><a class="btn" href="tsukaikata_kuwashii.pdf" target="_blank" rel="noopener">くわしい使い方</a></div>
     <p class="ver" id="verLine"></p>
   </section>
 
@@ -575,6 +590,13 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
   <div id="tutCard" role="dialog" aria-live="polite">
     <div class="tc-row"><img src="img/cat_head.png" alt=""><div><p id="tutText"></p><small id="tutSub"></small></div></div>
     <div class="tc-foot"><span class="tc-step" id="tutStep"></span><button id="tutSkip" type="button">とばす</button><button id="tutNext" class="primary" type="button">次へ</button></div>
+  </div>
+</div>
+<div id="home" hidden>
+  <div id="homeCard" role="dialog" aria-live="polite">
+    <div class="tc-row"><img src="img/cat_head.png" alt=""><div><p>ホーム画面に置いておくと便利だよ!</p><small>次からはホーム画面の「基準点ナビ」を押すだけで、アドレス欄の無い広い画面で開くよ。</small></div></div>
+    <ol id="homeSteps"></ol>
+    <div class="tc-foot"><button id="homeAdd" class="primary" type="button" hidden>📲 ホーム画面に追加</button><button id="homeLater" type="button">あとで</button><button id="homeNever" type="button">もう出さない</button></div>
   </div>
 </div>
 <div id="cam" hidden>
@@ -621,8 +643,8 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.4.17(2026-11-28)試験中';
-window.__knVer = 'v0.4.17';
+const VERSION = 'v0.4.18(2026-11-28)試験中';
+window.__knVer = 'v0.4.18';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1369,7 +1391,7 @@ function showPtsAndMe() {
   follow = false; $('#btnHere').classList.remove('on');
 }
 // 起動の動画・点検画面が閉じて地図が見えてから出す
-function covered() { return ['opening', 'splash', 'tut'].some(id => { const e = document.getElementById(id); return e && !e.hidden && getComputedStyle(e).display !== 'none'; }); }
+function covered() { return ['opening', 'splash', 'tut', 'home'].some(id => { const e = document.getElementById(id); return e && !e.hidden && getComputedStyle(e).display !== 'none'; }); }
 function toast(text, ms, onShow) {
   if (covered()) { setTimeout(() => toast(text, ms, onShow), 400); return; }
   if (onShow) onShow();
@@ -1615,12 +1637,72 @@ function startTut() {
   showSheet(null); if (measuring) setMeasuring(false);
   tutI = 0; $('#tut').hidden = false; placeTut();
 }
-function endTut() { $('#tut').hidden = true; try { localStorage.setItem('kn.tutDone', '1'); } catch {} }
+function endTut() { $('#tut').hidden = true; try { localStorage.setItem('kn.tutDone', '1'); } catch {} setTimeout(() => maybeHome(), 400); }
 $('#tutNext').addEventListener('click', () => { if (TUT[tutI].last) endTut(); else { tutI++; placeTut(); } });
 $('#tutSkip').addEventListener('click', endTut);
 $('#btnTut').addEventListener('click', startTut);
 addEventListener('resize', () => { if (!$('#tut').hidden) placeTut(); });
-function maybeTut() { let done = false; try { done = localStorage.getItem('kn.tutDone') === '1'; } catch {} if (!done) startTut(); }
+function maybeTut() { let done = false; try { done = localStorage.getItem('kn.tutDone') === '1'; } catch {} if (!done) startTut(); else maybeHome(); }
+
+/* ---------- ホーム画面に追加のチュートリアル ----------
+   機種・ブラウザで手順が違うので、いま開いているものに合わせて出す。
+   Android の Chrome は beforeinstallprompt を取っておき、ボタン 1 つで追加の確認を出す */
+let installEvt = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (!$('#home').hidden) renderHome(); });
+addEventListener('appinstalled', () => { installEvt = null; try { localStorage.setItem('kn.homeNever', '1'); } catch {} $('#home').hidden = true; toast('ホーム画面に追加しました。次からはホーム画面の「基準点ナビ」から開いてね', 4000); });
+function isStandalone() { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
+const hk = t => `<span class="hk">${t}</span>`;
+function homeSteps() {
+  if (isLineApp) return [
+    'LINE の中からは追加できないので、先にブラウザで開きます',
+    isIOS ? `右上の ${hk('…')} →「Safari で開く」` : `右上の ${hk('⋮')} →「他のアプリで開く」→「Chrome」`,
+    '開いたら、「基準点」の欄の「📲 ホーム画面に追加のしかた」をもう一度押してね'];
+  if (isIOS) return [
+    `画面の下(または上)の ${hk('共有')}(四角から上向きの矢印)を押す。見当たらないときは ${hk('…')} →「共有」`,
+    `出てきた一覧を上へずらして ${hk('ホーム画面に追加')} を押す`,
+    `右上の ${hk('追加')} を押す`,
+    'ホーム画面に猫の「基準点ナビ」が出たら完了!'];
+  if (isSamsung) return [
+    `画面の下の ${hk('≡')}(三本線)を押す`,
+    `${hk('ページを追加')}(または「現在のページを追加」)を押す`,
+    `${hk('ホーム画面')} を選んで ${hk('追加')}`,
+    'ホーム画面に「基準点ナビ」が出たら完了!'];
+  if (installEvt) return [
+    `下の ${hk('📲 ホーム画面に追加')} を押して、${hk('インストール')} か ${hk('追加')} を押すだけ!`,
+    `うまくいかないときは、右上の ${hk('⋮')} → ${hk('ホーム画面に追加')}(または「アプリをインストール」)`,
+    'ホーム画面に「基準点ナビ」が出たら完了!'];
+  return [
+    `右上の ${hk('⋮')}(縦の点 3 つ)を押す`,
+    `${hk('ホーム画面に追加')}(または ${hk('アプリをインストール')})を押す`,
+    `${hk('インストール')} か ${hk('追加')} を押す`,
+    'ホーム画面に「基準点ナビ」が出たら完了!'];
+}
+function renderHome() {
+  $('#homeSteps').innerHTML = homeSteps().map(x => `<li>${x}</li>`).join('');
+  $('#homeAdd').hidden = !(installEvt && !isLineApp);
+}
+function showHome() {
+  showSheet(null);
+  if (isStandalone()) { toast('もうホーム画面から開いているよ。このままで大丈夫!', 3000); return; }
+  renderHome(); $('#home').hidden = false;
+  try { localStorage.setItem('kn.homeShown', String(Date.now())); } catch {}
+}
+function maybeHome() {
+  if (isStandalone() || !$('#tut').hidden) return;
+  let never = false, last = 0;
+  try { never = localStorage.getItem('kn.homeNever') === '1'; last = +localStorage.getItem('kn.homeShown') || 0; } catch {}
+  if (never || Date.now() - last < 24 * 3600 * 1000) return;
+  showHome();
+}
+$('#homeAdd').addEventListener('click', async () => {
+  if (!installEvt) return;
+  const e = installEvt; installEvt = null; e.prompt();
+  try { const r = await e.userChoice; if (r && r.outcome === 'accepted') { $('#home').hidden = true; try { localStorage.setItem('kn.homeNever', '1'); } catch {} } } catch {}
+  renderHome();
+});
+$('#homeLater').addEventListener('click', () => { $('#home').hidden = true; });
+$('#homeNever').addEventListener('click', () => { $('#home').hidden = true; try { localStorage.setItem('kn.homeNever', '1'); } catch {} });
+$('#btnHome').addEventListener('click', showHome);
 
 /* ---------- 点名・文字の表示非表示(🏷) ---------- */
 function renderLabelsBtn() { $('#btnLabels').classList.toggle('off', !labelsOn); $('#btnLabels').title = labelsOn ? '点名・文字を隠す' : '点名・文字を出す'; }
