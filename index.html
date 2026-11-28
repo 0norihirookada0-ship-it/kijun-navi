@@ -373,7 +373,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </div>
   </div>
   <button id="opSkip" type="button">とばす</button>
-  <div id="opFoot">v0.4.18 試験中 ・ 株式会社ネクサス</div>
+  <div id="opFoot">v0.4.19 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
@@ -421,7 +421,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.18 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.19 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <div class="sp-cat"><img class="catHead" src="img/cat_head.png" alt="" style="width:64px;height:64px"><span id="spCatMsg">準備しています…</span></div>
   <ul class="sp-list">
@@ -643,8 +643,8 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.4.18(2026-11-28)試験中';
-window.__knVer = 'v0.4.18';
+const VERSION = 'v0.4.19(2026-11-28)試験中';
+window.__knVer = 'v0.4.19';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -871,12 +871,27 @@ function decodeText(buf) {
   try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
   catch { return new TextDecoder('shift_jis').decode(buf); }
 }
+const MAX_PTS = 3000; // 案内する点はこれまで(画地の SIMA など何万点も読むと画面が固まる)
 function parseCsvSima(text) {
   const out = [];
-  for (const line of text.replace(/\r+\n/g, '\n').split(/\n|\r/)) { // 二重の改行(\r\r\n)にも耐える
+  out.simaParcels = 0; // SIMA の画地・区画(D00 行)の数。点ではないので読まない
+  const lines = text.replace(/\r+\n/g, '\n').split(/\n|\r/); // 二重の改行(\r\r\n)にも耐える
+  // SIMA は「G00,03,題」「Z00,座標ﾃﾞｰﾀ」の行を持つ。SIMA なら座標の行(A01)だけを読み、画地の行(D00,1,388-2,1 など)を
+  // 座標と取り違えない(2026-11-28 地番参考図の SIMA で、地番の 388 などが X・Y になり 2,823 点おかしな点が出た)。
+  // CSV の点名が「G00」「A01」のような場合に SIMA と見ないよう、2 列目が座標の数字でない行だけで見分ける
+  const isSima = lines.some(l => /^\s*G00\s*,\s*\d{1,2}\s*,/.test(l) || (/^\s*Z00\s*,/.test(l) && !/^\s*Z00\s*,\s*-?[\d.]+\s*(,|$)/.test(l)));
+  for (const line of lines) {
     if (!line.trim()) continue;
     const cols = line.split(/,|\t/).map(s => s.trim());
-    if (/^A01/.test(line) && cols.length >= 5) {
+    if (isSima) {
+      // 座標の行は A01。座標の行を A00 で書くソフトもあるので、A00 も数字がそろっていれば読む
+      if (/^A0[01]$/.test(cols[0]) && cols.length >= 5) {
+        const X = parseFloat(cols[3]), Y = parseFloat(cols[4]), H = parseFloat(cols[5] ?? '');
+        if (Number.isFinite(X) && Number.isFinite(Y)) out.push({ name: cols[2] || cols[1], X, Y, H: Number.isFinite(H) ? H : 0 });
+      } else if (cols[0] === 'D00') out.simaParcels++;
+      continue;
+    }
+    if (/^A01/.test(line) && cols.length >= 5) { // 見出しの無い SIMA の座標の行だけ(今までどおり)
       const X = parseFloat(cols[3]), Y = parseFloat(cols[4]), H = parseFloat(cols[5] ?? '');
       if (Number.isFinite(X) && Number.isFinite(Y)) out.push({ name: cols[2] || cols[1], X, Y, H: Number.isFinite(H) ? H : 0 });
       continue;
@@ -980,7 +995,9 @@ async function loadPtsFile(f) {
   try {
     const list = parseCsvSima(decodeText(await readBuf(f)));
     if (!list.length) throw new Error('点が見つかりません(CSV は 点名,X,Y,H の順)');
-    setPoints(list, `${f.name}: ${list.length} 点を読みました。点を押すと案内します。`);
+    if (list.length > MAX_PTS) throw new Error(`点が ${list.length.toLocaleString()} 点あり、多すぎて案内できません(${MAX_PTS.toLocaleString()} 点まで)。筆界・地番図のような図面は「📐 図面」から DXF で読んでください`);
+    const extra = list.simaParcels ? `(SIMA の画地 ${list.simaParcels.toLocaleString()} 筆は点ではないので読みません。筆界の図は「📐 図面」から DXF で)` : '';
+    setPoints(list, `${f.name}: ${list.length} 点を読みました。点を押すと案内します。${extra}`);
   } catch (err) {
     if (isCloudDoc(f, err)) { msg('#ptsMsg', CLOUD_MSG + '下の「📋 貼り付けで読む」で表をコピーして貼り付けるか、LINE のファイルを長押し→「保存」してから「ダウンロード」で選んでください。', 'bad'); $('#pasteBox').open = true; }
     else msg('#ptsMsg', `${f.name} を読めません: ${err.message}`, 'bad');
@@ -994,6 +1011,7 @@ $('#btnClip').addEventListener('click', async () => {
 $('#btnPaste').addEventListener('click', () => {
   const list = parseCsvSima($('#pasteTxt').value);
   if (!list.length) { msg('#ptsMsg', '点が見つかりません。点名・X・Y・H の 4 列をコピーして貼り付けてください。', 'bad'); return; }
+  if (list.length > MAX_PTS) { msg('#ptsMsg', `点が ${list.length.toLocaleString()} 点あり、多すぎて案内できません(${MAX_PTS.toLocaleString()} 点まで)。`, 'bad'); return; }
   setPoints(list, `貼り付けから ${list.length} 点を読みました。点を押すと案内します。`);
   $('#pasteTxt').value = ''; $('#pasteBox').open = false;
 });
