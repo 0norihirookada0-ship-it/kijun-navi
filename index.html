@@ -75,6 +75,7 @@ button{font:inherit;color:inherit}
 .mptlabel{background:#fff;color:#a61e4d;border:1px solid #a61e4d;font-weight:700;font-size:11px;padding:0 5px;border-radius:8px;white-space:nowrap;display:inline-block;transform:translate(8px,-50%)}
 /* 図面の文字 */
 .fracdpr #map.photo .leaflet-tile-container img.leaflet-tile{mix-blend-mode:plus-lighter}
+.ptDel{padding:2px 10px;min-height:0;font-size:14px}
 .dtext{color:#1f2d3d;font-size:11px;font-weight:700;white-space:nowrap;transform-origin:0 100%;text-shadow:0 0 2px #fff,0 0 2px #fff;position:absolute;bottom:0;left:0;pointer-events:none}
 /* 下: ボタンの帯 */
 #bar{position:fixed;left:0;right:0;bottom:0;z-index:1000;height:calc(var(--barH) + env(safe-area-inset-bottom,0px));padding-bottom:env(safe-area-inset-bottom,0px);
@@ -357,7 +358,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 </div>
   </div>
   <button id="opSkip" type="button">とばす</button>
-  <div id="opFoot">v0.4.16 試験中 ・ 株式会社ネクサス</div>
+  <div id="opFoot">v0.4.17 試験中 ・ 株式会社ネクサス</div>
 </div>
 <script>
   (function () {
@@ -405,7 +406,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
 <!-- 点検画面(案C 点検つき型。2026-11-23 社長決定)。開くたびに 4 項目を点検し、駄目な所は理由と直し方を出す。全部そろえば自動で地図へ -->
 <div id="splash">
   <div class="sp-head">
-    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.16 試験中 ・ 株式会社ネクサス</div></div>
+    <div><div class="sp-ttl">ECP基準点ナビ</div><div class="sp-ver" id="spVer">v0.4.17 試験中 ・ 株式会社ネクサス</div></div>
   </div>
   <div class="sp-cat"><img class="catHead" src="img/cat_head.png" alt="" style="width:64px;height:64px"><span id="spCatMsg">準備しています…</span></div>
   <ul class="sp-list">
@@ -524,7 +525,8 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center}
       <div class="row"><input id="linkName" type="text" placeholder="現場名(例: メーカーズ4期)" style="flex:1;min-width:10em;font-size:16px;padding:8px"><button class="btn primary" id="btnLink" type="button">リンクを作ってコピー</button></div>
       <input id="linkOut" type="text" readonly style="width:100%;font-size:12px;margin-top:6px" hidden>
     </div>
-    <table id="ptTable"><thead><tr><th>点名</th><th>X(北)</th><th>Y(東)</th><th>H</th></tr></thead><tbody></tbody></table>
+    <table id="ptTable"><thead><tr><th>点名</th><th>X(北)</th><th>Y(東)</th><th>H</th><th></th></tr></thead><tbody></tbody></table>
+    <div class="row" id="ptClearRow" hidden><button class="btn" id="btnPtsClear" type="button">🗑 基準点を全部消す</button><span class="note">1 点だけ消すときは、表の右の ✕</span></div>
     <h3>座標系</h3>
     <div class="row"><select id="zone"></select><span class="note">既定は第6系(奈良・京都・大阪・和歌山・三重・滋賀・福井)</span></div>
     <h3>現地合わせ(試験中)</h3>
@@ -619,8 +621,8 @@ function main() {
    iPhone の向き(コンパス)の許可・地図の部品をアプリと一緒に置く・タイル保存に上限。
    座標変換(latlon2xy・xy2latlon)と現地合わせ(alignPoints・calApply)の式は v0.1 のまま(検算済み)。
    ============================================================ */
-const VERSION = 'v0.4.16(2026-11-26)試験中';
-window.__knVer = 'v0.4.16';
+const VERSION = 'v0.4.17(2026-11-28)試験中';
+window.__knVer = 'v0.4.17';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -873,14 +875,24 @@ function setPoints(list, note) {
   savePoints(); renderPoints(); fillCalPick(); renderCalTable(); drawPoints(); fitData(); updateNav();
   msg('#ptsMsg', note, 'good');
 }
+// 1 点だけ消す。案内中の点なら案内をやめる
+function removePoint(i) {
+  const name = points[i] && points[i].name;
+  points = points.filter((_, k) => k !== i);
+  if (selectedIdx === i) selectedIdx = -1; else if (selectedIdx > i) selectedIdx--;
+  calPairs = []; calTransform = null;
+  savePoints(); renderPoints(); fillCalPick(); renderCalTable(); drawPoints(); updateNav();
+  msg('#ptsMsg', `${name} を消しました(残り ${points.length} 点)。`, 'good');
+}
 function renderPoints() {
   const tb = $('#ptTable tbody'); tb.innerHTML = '';
-  $('#linkBox').hidden = !points.length;
+  $('#linkBox').hidden = !points.length; $('#ptClearRow').hidden = !points.length;
   points.forEach((p, i) => {
     const tr = document.createElement('tr');
     tr.className = 'pt' + (i === selectedIdx ? ' sel' : '');
-    tr.innerHTML = `<td>${esc(p.name)}</td><td class="num">${p.X.toFixed(3)}</td><td class="num">${p.Y.toFixed(3)}</td><td class="num">${p.H.toFixed(3)}</td>`;
+    tr.innerHTML = `<td>${esc(p.name)}</td><td class="num">${p.X.toFixed(3)}</td><td class="num">${p.Y.toFixed(3)}</td><td class="num">${p.H.toFixed(3)}</td><td><button class="btn ptDel" type="button" aria-label="${esc(p.name)} を消す">✕</button></td>`;
     tr.addEventListener('click', () => selectTarget(i, true));
+    tr.querySelector('.ptDel').addEventListener('click', e => { e.stopPropagation(); removePoint(i); });
     tb.appendChild(tr);
   });
 }
@@ -1861,6 +1873,22 @@ async function chromeUrl() {
 }
 window.__chromeUrl = chromeUrl;
 document.querySelectorAll('[data-chrome]').forEach(b => b.addEventListener('click', async () => { location.href = await chromeUrl(); }));
+// 全部消す。押し間違いを防ぐため、3 秒の間にもう一度押したときだけ消す
+let ptsClearArm = 0;
+$('#btnPtsClear').addEventListener('click', () => {
+  const b = $('#btnPtsClear');
+  if (Date.now() - ptsClearArm > 3000) {
+    ptsClearArm = Date.now(); b.textContent = '⚠ もう一度押すと全部消えます';
+    setTimeout(() => { if (Date.now() - ptsClearArm >= 3000) b.textContent = '🗑 基準点を全部消す'; }, 3100);
+    return;
+  }
+  ptsClearArm = 0; b.textContent = '🗑 基準点を全部消す';
+  const n = points.length;
+  points = []; selectedIdx = -1; calPairs = []; calTransform = null;
+  localStorage.removeItem('kn.genba'); $('#linkName').value = '';
+  savePoints(); renderPoints(); fillCalPick(); renderCalTable(); drawPoints(); updateNav();
+  msg('#ptsMsg', `基準点 ${n} 点を全部消しました。`, 'good');
+});
 async function loadFromLink() {
   const hs = /(^|[#&])p=/.test(location.hash) ? location.hash.slice(1) : (/[?&]p=/.test(location.search) ? location.search.slice(1) : '');
   if (!hs) return false;
